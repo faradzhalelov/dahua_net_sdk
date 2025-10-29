@@ -21,8 +21,14 @@ Pod::Spec.new do |s|
       '"$(PODS_TARGET_SRCROOT)/Classes/3rdparty/include/**"'
     ].join(' '),
     'LIBRARY_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/Classes/3rdparty/lib"',
-    'OTHER_LDFLAGS' => '-ObjC -all_load',
+    # Avoid -all_load to prevent pulling in unused objects that may
+    # introduce undefined symbols from vendor archives. -ObjC is
+    # sufficient for Objective-C categories if any are present.
+    'OTHER_LDFLAGS' => '-ObjC',
     'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES' => 'YES',
+    # Ensure modern C++ standard/library for vendor C++ code
+    'CLANG_CXX_LANGUAGE_STANDARD' => 'gnu++14',
+    'CLANG_CXX_LIBRARY' => 'libc++',
     'ENABLE_BITCODE' => 'NO'
   }
   

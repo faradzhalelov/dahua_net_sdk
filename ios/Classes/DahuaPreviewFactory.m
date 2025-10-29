@@ -15,18 +15,45 @@
     if (self = [super init]) {
         _view = [[UIView alloc] initWithFrame:frame];
         _view.backgroundColor = [UIColor blackColor];
+        _view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        _view.contentMode = UIViewContentModeScaleAspectFit;
+        _view.clipsToBounds = YES;
 
         NSDictionary* dict = (NSDictionary*)args;
         NSString* ip = dict[@"ip"];
         NSNumber* port = dict[@"port"];
         NSString* user = dict[@"user"];
         NSString* pass = dict[@"pass"];
+    NSNumber* channel = dict[@"channel"] ?: @(0);
+    NSNumber* streamType = dict[@"streamType"] ?: @(0); // 0=Main,1=Extra1,2=Extra2
 
-        dh_init();
-        _login = dh_login(ip.UTF8String, port.intValue, user.UTF8String, pass.UTF8String);
-        if (_login) {
-            _real = dh_start_realplay(_login, _view);
-        }
+    NSLog(@"[DahuaPreview] Connecting to %@:%@ with user %@, channel=%@, streamType=%@", ip, port, user, channel, streamType);
+        
+        // SDK уже инициализирован через DahuaSdkPlugin, не нужно вызывать снова
+        // dh_init(); 
+        
+        // Ждём, пока Flutter разместит view и установит правильный frame
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self->_login = dh_login(ip.UTF8String, port.intValue, user.UTF8String, pass.UTF8String);
+            if (self->_login) {
+                NSLog(@"[DahuaPreview] Login successful (handle=%lld), waiting for layout...", self->_login);
+
+                // Даём Flutter время показать view (frame установится после layoutSubviews)
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    NSLog(@"[DahuaPreview] View frame after layout: %@", NSStringFromCGRect(self->_view.frame));
+                    
+                    // Запускаем воспроизведение после того, как view имеет размер
+                    self->_real = dh_start_realplay2(self->_login, channel.intValue, streamType.intValue, self->_view);
+                    if (self->_real) {
+                        NSLog(@"[DahuaPreview] RealPlay started successfully (handle=%lld)", self->_real);
+                    } else {
+                        NSLog(@"[DahuaPreview] RealPlay failed to start");
+                    }
+                });
+            } else {
+                NSLog(@"[DahuaPreview] Login failed");
+            }
+        });
     }
     return self;
 }

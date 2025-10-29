@@ -231,6 +231,7 @@ class DahuaVideoScreen extends StatefulWidget {
 
 class _DahuaVideoScreenState extends State<DahuaVideoScreen> {
   bool _isLoading = true;
+  String _debugInfo = 'Initializing...';
 
   @override
   void initState() {
@@ -240,6 +241,7 @@ class _DahuaVideoScreenState extends State<DahuaVideoScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _debugInfo = 'Connected to ${widget.ip}:${widget.port}';
         });
       }
     });
@@ -293,8 +295,10 @@ class _DahuaVideoScreenState extends State<DahuaVideoScreen> {
           Expanded(
             child: Container(
               color: Colors.black,
-              child: _isLoading
-                  ? const Center(
+              child: Stack(
+                children: [
+                  if (_isLoading)
+                    const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -307,12 +311,35 @@ class _DahuaVideoScreenState extends State<DahuaVideoScreen> {
                         ],
                       ),
                     )
-                  : DahuaPreview(
+                  else
+                    DahuaPreview(
                       ip: widget.ip,
                       port: widget.port,
                       user: widget.user,
                       pass: widget.pass,
                     ),
+                  // Debug info overlay
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _debugInfo,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 

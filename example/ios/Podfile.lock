@@ -19,7 +19,7 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/integration_test/ios"
 
 SPEC CHECKSUMS:
-  dahua_sdk: 3a7eea64fb1246e52ca14d018c2128499cba943a
+  dahua_sdk: 2d4e867bf54d2282c789381eb26846a228db300f
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
 

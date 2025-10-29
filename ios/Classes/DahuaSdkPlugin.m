@@ -3,12 +3,14 @@
 #import "DahuaPreviewFactory.h"
 
 @implementation DahuaSdkPlugin
+static FlutterMethodChannel* s_channel = nil;
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel = [FlutterMethodChannel
       methodChannelWithName:@"dahua_sdk"
             binaryMessenger:[registrar messenger]];
   DahuaSdkPlugin* instance = [[DahuaSdkPlugin alloc] init];
   [registrar addMethodCallDelegate:instance channel:channel];
+  s_channel = channel;
 
   DahuaPreviewFactory* factory = [[DahuaPreviewFactory alloc] initWithMessenger:[registrar messenger]];
   [registrar registerViewFactory:factory withId:@"dahua_sdk/preview"];
@@ -33,6 +35,21 @@
     result([@"iOS " stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else {
     result(FlutterMethodNotImplemented);
+  }
+}
+
+// MARK: - Native -> Dart logging
++ (void)emitLog:(NSString*)message {
+  if (!message.length) return;
+  void (^send)(void) = ^{
+    if (s_channel) {
+      [s_channel invokeMethod:@"debugLog" arguments:@{ @"message": message }];
+    }
+  };
+  if ([NSThread isMainThread]) {
+    send();
+  } else {
+    dispatch_async(dispatch_get_main_queue(), send);
   }
 }
 
