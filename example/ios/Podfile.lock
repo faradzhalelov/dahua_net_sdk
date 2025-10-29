@@ -1,0 +1,28 @@
+PODS:
+  - dahua_sdk (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - dahua_sdk (from `.symlinks/plugins/dahua_sdk/ios`)
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+
+EXTERNAL SOURCES:
+  dahua_sdk:
+    :path: ".symlinks/plugins/dahua_sdk/ios"
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+
+SPEC CHECKSUMS:
+  dahua_sdk: 3a7eea64fb1246e52ca14d018c2128499cba943a
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+
+PODFILE CHECKSUM: 4b993c76b567521e2663da3ae0891ea19590e693
+
+COCOAPODS: 1.16.2
