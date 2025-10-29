@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:dahua_sdk/dahua_sdk.dart';
+import 'dual_channel_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -199,15 +200,107 @@ class _DahuaHomePageState extends State<DahuaHomePage> {
             ElevatedButton.icon(
               onPressed: _isInitialized && !_isConnected ? _connect : null,
               icon: const Icon(Icons.videocam),
-              label: const Text('Connect & View Stream'),
+              label: const Text('Single Channel View'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(16),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            ElevatedButton.icon(
+              onPressed: _isInitialized && !_isConnected
+                  ? _connectDualChannel
+                  : null,
+              icon: const Icon(Icons.video_library),
+              label: const Text('Dual Channel View (2 Cameras)'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+                backgroundColor: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            ElevatedButton.icon(
+              onPressed: _isInitialized && !_isConnected
+                  ? _connectQuadChannel
+                  : null,
+              icon: const Icon(Icons.grid_view),
+              label: const Text('Quad Channel View (4 Cameras)'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+                backgroundColor: Colors.orange,
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _connectDualChannel() {
+    if (_ipController.text.isEmpty ||
+        _userController.text.isEmpty ||
+        _passController.text.isEmpty) {
+      setState(() {
+        _statusMessage = 'Please fill all fields';
+      });
+      return;
+    }
+
+    setState(() {
+      _isConnected = true;
+      _statusMessage = 'Connecting to dual channels...';
+    });
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DualChannelScreen(
+          ip: _ipController.text,
+          port: int.tryParse(_portController.text) ?? 37777,
+          user: _userController.text,
+          pass: _passController.text,
+        ),
+      ),
+    ).then((_) {
+      setState(() {
+        _isConnected = false;
+        _statusMessage = 'Disconnected';
+      });
+    });
+  }
+
+  void _connectQuadChannel() {
+    if (_ipController.text.isEmpty ||
+        _userController.text.isEmpty ||
+        _passController.text.isEmpty) {
+      setState(() {
+        _statusMessage = 'Please fill all fields';
+      });
+      return;
+    }
+
+    setState(() {
+      _isConnected = true;
+      _statusMessage = 'Connecting to quad channels...';
+    });
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuadChannelScreen(
+          ip: _ipController.text,
+          port: int.tryParse(_portController.text) ?? 37777,
+          user: _userController.text,
+          pass: _passController.text,
+        ),
+      ),
+    ).then((_) {
+      setState(() {
+        _isConnected = false;
+        _statusMessage = 'Disconnected';
+      });
+    });
   }
 }
 
