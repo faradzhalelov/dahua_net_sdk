@@ -139,10 +139,10 @@ public class DahuaPreviewView implements PlatformView {
                 Thread.sleep(100);
 
                 // Create real data callback
-                final fRealDataCallBackEx callback = new fRealDataCallBackEx() {
+                final CB_fRealDataCallBackEx callback = new CB_fRealDataCallBackEx() {
                     @Override
-                    public int invoke(LLong lRealHandle, int dwDataType, byte[] pBuffer, 
-                                     int dwBufSize, LLong param, LLong dwUser) {
+                    public void invoke(long lRealHandle, int dwDataType, byte[] pBuffer, 
+                                     int dwBufSize, int dwUser) {
                         if (dataCount < 5) {
                             DahuaSdkPlugin.emitLog("Callback: type=" + dwDataType + ", size=" + dwBufSize + ", port=" + finalPlayPort);
                         }
@@ -156,8 +156,6 @@ public class DahuaPreviewView implements PlatformView {
                                 DahuaSdkPlugin.emitLog("Packet #" + dataCount + ": size=" + dwBufSize + ", InputData=" + inputResult);
                             }
                         }
-                        
-                        return 0;
                     }
                 };
 
@@ -189,7 +187,7 @@ public class DahuaPreviewView implements PlatformView {
                 if (playPort >= 0) {
                     IPlaySDK.PLAYStop(playPort);
                     IPlaySDK.PLAYCloseStream(playPort);
-                    IPlaySDK.PLAYFreePort(playPort);
+                    IPlaySDK.PLAYReleasePort(playPort);
                     playPort = -1;
                 }
 

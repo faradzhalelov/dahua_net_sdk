@@ -1,6 +1,8 @@
 package com.dahua.sdk.dahua_sdk;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -29,16 +31,21 @@ public class DahuaSdkPlugin implements FlutterPlugin, MethodCallHandler {
     // Static reference for logging from native code
     private static DahuaSdkPlugin instance;
     private static MethodChannel pluginChannel;
+    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     /**
      * Emit a debug log message from native to Dart (flutter run console)
+     * This method is thread-safe and can be called from any thread
      */
     public static void emitLog(String message) {
         Log.d(TAG, message);
         if (pluginChannel != null) {
-            Map<String, Object> args = new HashMap<>();
-            args.put("message", message);
-            pluginChannel.invokeMethod("debugLog", args);
+            // Always run on UI thread to avoid RuntimeException
+            mainHandler.post(() -> {
+                Map<String, Object> args = new HashMap<>();
+                args.put("message", message);
+                pluginChannel.invokeMethod("debugLog", args);
+            });
         }
     }
 
