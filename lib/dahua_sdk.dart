@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:async';
 
@@ -78,30 +79,54 @@ class _DahuaPreviewState extends State<DahuaPreview> {
 
   @override
   Widget build(BuildContext context) {
-    if (!Platform.isIOS) {
-      return const Center(child: Text('iOS only'));
+    // Support both iOS and Android
+    final Widget platformView;
+
+    if (Platform.isIOS) {
+      platformView = UiKitView(
+        viewType: 'dahua_sdk/preview',
+        creationParams: {
+          'ip': widget.ip,
+          'port': widget.port,
+          'user': widget.user,
+          'pass': widget.pass,
+          'channel': widget.channel,
+          'streamType': widget.streamType,
+        },
+        creationParamsCodec: const StandardMessageCodec(),
+        onPlatformViewCreated: (id) {
+          setState(() {
+            _isCreated = true;
+          });
+          debugPrint('DahuaPreview (iOS) created with id: $id');
+        },
+      );
+    } else if (Platform.isAndroid) {
+      platformView = AndroidView(
+        viewType: 'dahua_sdk/preview',
+        creationParams: {
+          'ip': widget.ip,
+          'port': widget.port,
+          'user': widget.user,
+          'pass': widget.pass,
+          'channel': widget.channel,
+          'streamType': widget.streamType,
+        },
+        creationParamsCodec: const StandardMessageCodec(),
+        onPlatformViewCreated: (id) {
+          setState(() {
+            _isCreated = true;
+          });
+          debugPrint('DahuaPreview (Android) created with id: $id');
+        },
+      );
+    } else {
+      return const Center(child: Text('Platform not supported'));
     }
 
     return Stack(
       children: [
-        UiKitView(
-          viewType: 'dahua_sdk/preview',
-          creationParams: {
-            'ip': widget.ip,
-            'port': widget.port,
-            'user': widget.user,
-            'pass': widget.pass,
-            'channel': widget.channel,
-            'streamType': widget.streamType,
-          },
-          creationParamsCodec: const StandardMessageCodec(),
-          onPlatformViewCreated: (id) {
-            setState(() {
-              _isCreated = true;
-            });
-            debugPrint('DahuaPreview created with id: $id');
-          },
-        ),
+        platformView,
         if (!_isCreated)
           Container(
             color: Colors.black,

@@ -33,6 +33,9 @@ flutter:
   # adding or updating assets for this project.
   plugin:
     platforms:
+      android:
+        package: com.dahua.sdk.dahua_sdk
+        pluginClass: DahuaSdkPlugin
       ios:
         pluginClass: DahuaSdkPlugin
 

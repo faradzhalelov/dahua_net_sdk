@@ -1,0 +1,74 @@
+group 'com.dahua.sdk'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.7.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.3.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java', 'src/main/kotlin']
+            jniLibs.srcDirs = ['libs/arm64-v8a', 'libs/armeabi-v7a', 'libs/armeabi']
+        }
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 34
+
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+    }
+
+    packagingOptions {
+        pickFirst 'lib/armeabi-v7a/libgnustl_shared.so'
+        pickFirst 'lib/arm64-v8a/libgnustl_shared.so'
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
+    
+    // Dahua SDK JARs
+    implementation files('libs/INetSDK.jar')
+    implementation files('libs/IPlaySDK.jar')
+    implementation files('libs/SmartConfig.jar')
+    implementation files('libs/audiopairsdk.jar')
+    implementation files('libs/libToUProxy.jar')
+    implementation files('libs/zxing.jar')
+    implementation files('libs/Android_DataGridView-1.01.aar')
+}

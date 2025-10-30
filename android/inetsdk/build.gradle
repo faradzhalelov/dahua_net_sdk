@@ -1,0 +1,53 @@
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+task CopyNetSDKJar(type:Copy){
+    println("delete old jar")
+    from("build/libs/")
+    into('../app/libs/')
+    include("inetsdk.jar");
+    rename("inetsdk.jar", "INetSDK.jar")
+}
+
+tasks.withType(JavaCompile){
+    options.encoding = "UTF-8"
+}
+
+def releaseTime(){
+    def date =new Date().format("yyyy-MM-dd",java.util.TimeZone.getTimeZone("UTC"))
+    date = date.replaceAll("-","")
+    date = date.substring(2,date.length())
+    return date
+}
+
+def getSVNVersion(){
+    return 29364
+}
+
+task  PacketFile(type:Copy){
+    println("makeFile")
+    def fileName = "General_NetSDK_ChnEng_Android_Java_IS_V3.49.${getSVNVersion()}.T.${releaseTime()}"
+    File srcDir = file(fileName)
+    srcDir.mkdir()
+
+    from('../app/libs/INetSDK.jar')
+    into(fileName)
+
+    from('../app/libs/arm64-v8a/libconfigsdk.so')
+    into(fileName)
+
+    from('../app/libs/arm64-v8a/libjninetsdk.so')
+    into(fileName)
+
+    from('../app/libs/arm64-v8a/libnetsdk.so')
+    into(fileName)
+}
+
+
+
+
+
+
+
