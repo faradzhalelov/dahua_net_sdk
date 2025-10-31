@@ -1,0 +1,71 @@
+# Exclude build artifacts and large binaries from pub.dev package
+# Users will need to download SDK separately from GitHub Releases
+
+# SDK Release packages (created by prepare_sdk_release.sh)
+sdk-release/
+
+# Build directories
+build/
+example/build/
+example/.dart_tool/
+example/android/.gradle/
+example/android/app/build/
+example/ios/Pods/
+example/ios/.symlinks/
+example/ios/Flutter/
+example/ios/Runner.xcworkspace/
+example/ios/Runner.xcodeproj/project.xcworkspace/
+example/ios/Runner.xcodeproj/xcuserdata/
+example/android/app/build/
+
+# Large SDK examples and demos
+android/sdk_example/
+ios/netsdk/
+
+# Binary libraries (users must download from releases)
+android/libs/
+android/inetsdk/General_NetSDK_ChnEng_Android_Java_IS_V3.49.29364.T.250724/
+ios/Classes/3rdparty/
+
+# AAR files
+*.aar
+
+# Static libraries
+*.a
+
+# Shared libraries (keep .so and .dylib structure files, but not the binaries)
+*.so
+*.dylib
+
+# IDE and OS files
+*.iml
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.history/
+*.log
+
+# Gradle wrapper
+example/android/gradle/
+example/android/gradlew
+example/android/gradlew.bat
+
+# Local properties
+example/android/local.properties
+example/ios/Flutter/Generated.xcconfig
+example/ios/Flutter/flutter_export_environment.sh
+example/.flutter-plugins
+example/.flutter-plugins-dependencies
+
+# Test coverage
+coverage/
+
+# Build scripts
+*.bat
+
+# Temporary files
+*.tmp
+*.temp

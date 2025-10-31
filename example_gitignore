@@ -1,0 +1,16 @@
+# Example .gitignore for projects using dahua_sdk
+# Add these lines to your Flutter project's .gitignore
+
+# Dahua SDK binaries (download separately using download_dahua_sdk.sh)
+# Do NOT commit these large files to your repository
+android/libs/arm64-v8a/
+android/libs/armeabi/
+android/libs/armeabi-v7a/
+android/libs/*.jar
+android/libs/*.aar
+
+ios/Classes/3rdparty/
+
+# If you keep the entire directories:
+# android/libs/
+# ios/Classes/3rdparty/

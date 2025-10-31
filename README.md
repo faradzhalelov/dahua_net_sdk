@@ -18,12 +18,17 @@ A Flutter plugin for integrating Dahua WiFi cameras on iOS and Android platforms
 
 ## Installation
 
+### ⚠️ Important: SDK Binaries Required
+
+This plugin requires Dahua SDK native libraries which are **not included** in the pub.dev package due to size limitations (~420 MB total). You must download them separately from GitHub Releases.
+
+### Step 1: Add the Plugin
+
 Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  dahua_sdk:
-    path: ../  # Or use git/pub.dev URL when published
+  dahua_sdk: ^0.0.1
 ```
 
 Then run:
@@ -32,11 +37,30 @@ Then run:
 flutter pub get
 ```
 
+### Step 2: Download SDK Binaries
+
+**Option A: Automatic (Recommended)**
+
+Run this script in your Flutter project root:
+
+```bash
+curl -L https://raw.githubusercontent.com/faradzhalelov/dahua_net_sdk/main/download_dahua_sdk.sh | bash
+```
+
+**Option B: Manual Download**
+
+1. Download SDK binaries from [GitHub Releases](https://github.com/faradzhalelov/dahua_net_sdk/releases/tag/v0.0.1-sdk)
+2. Extract to your project:
+   - `android-libs.zip` → `android/libs/`
+   - `ios-3rdparty.zip` → `ios/Classes/3rdparty/`
+
+📚 **[Complete Installation Guide](SDK_INSTALLATION.md)**
+
 ### iOS Setup
 
-The plugin uses native iOS frameworks. CocoaPods will automatically link the required Dahua NetSDK libraries.
+The plugin uses native iOS frameworks with Dahua NetSDK libraries.
 
-Minimum iOS deployment target: **12.0**
+**Minimum iOS deployment target: 12.0**
 
 Update your `ios/Podfile` if needed:
 
@@ -44,9 +68,17 @@ Update your `ios/Podfile` if needed:
 platform :ios, '12.0'
 ```
 
+After downloading SDK binaries, run:
+
+```bash
+cd ios && pod install
+```
+
 ### Android Setup
 
-The plugin includes the Dahua NetSDK for Android. 
+The plugin uses Dahua NetSDK for Android.
+
+**Minimum Android SDK: 21 (Android 5.0)** 
 
 Minimum SDK version: **21** (Android 5.0)
 
