@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:dahua_sdk/dahua_sdk.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dual_channel_screen.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -31,10 +33,18 @@ class DahuaHomePage extends StatefulWidget {
 }
 
 class _DahuaHomePageState extends State<DahuaHomePage> {
-  final _ipController = TextEditingController(text: '192.168.80.203');
-  final _portController = TextEditingController(text: '37777');
-  final _userController = TextEditingController(text: 'admin');
-  final _passController = TextEditingController(text: 'cerebro123Q');
+  final _ipController = TextEditingController(
+    text: dotenv.env['DAHUA_IP'] ?? '192.168.1.1',
+  );
+  final _portController = TextEditingController(
+    text: dotenv.env['DAHUA_PORT'] ?? '37777',
+  );
+  final _userController = TextEditingController(
+    text: dotenv.env['DAHUA_USER'] ?? 'admin',
+  );
+  final _passController = TextEditingController(
+    text: dotenv.env['DAHUA_PASS'] ?? 'password',
+  );
   /*
   192.168.80.203
   admin
