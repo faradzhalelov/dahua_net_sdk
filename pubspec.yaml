@@ -1,6 +1,13 @@
 name: dahua_sdk
 description: "A Flutter plugin for Dahua devices."
 version: 0.0.1
+homepage: https://github.com/faradzhalelov/dahua_net_sdk
+repository: https://github.com/faradzhalelov/dahua_net_sdk
+issue_tracker: https://github.com/faradzhalelov/dahua_net_sdk/issues
+topics:
+  - flutter
+  - plugin
+  - native
 
 environment:
   sdk: ^3.9.2
