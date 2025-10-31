@@ -5756,10 +5756,10 @@ public class TestInterfaceActivity extends ListActivity {
 
 	void MobileSubscribe() {
 		/* --------------SetMobileSubscribe接口测试----------------------*/
-		String strRegisterID = "APA91bFMDi7xJ4zW2uebY8_2EdFEyJ4ew6_BAX2_ck-povlLgf2xs4JwIr7O8b-VAtJQVFHwj-k9DVuTZ3qKtGujeH25RGcP-vXxyd-p4_fQRkocc8h_hv0IzfDB80wQqrsOHJ517Cg-utvc41o1CuR7EmkvqCYMHA"; // mobile id registration on google GCM service
-		String strDevId = "8507de90-58d4-44da-8248-3503225f4159"; // you can use this id to discriminate event msg come different device
-		String strUser = "AIzaSyDXwrcImAjxWhNC4WYqygjXEDS-Z83hBMo"; // API Key, get from google service
-		String strUserEx = "AIzaSyDXwrcImAjxWhNC4WYqygjXEDS-Z83hBMo1233432534653460834080dsafkewsjfkerjt435r0329i0tr3285832kfdsfkjeshfsndvjds132131421"; // API Key, get from google service
+		String strRegisterID = "REGISTER_ID"; // mobile id registration on google GCM service
+		String strDevId = "DEVICE_ID"; // you can use this id to discriminate event msg come different device
+		String strUser = "YOUR_API_KEY_HERE"; // API Key, get from google service
+		String strUserEx = "YOUR_API_KEY_HERE"; // API Key, get from google service
 		String strAuthServerAddr = "https://www.google.com/accounts/ClientLogin";
 		String strPushServerAddr = "https://android.googleapis.com/gcm/send";
 		String strMainAddr = "https://android.googleapis.com/gcm/send";
@@ -5805,7 +5805,7 @@ public class TestInterfaceActivity extends ListActivity {
 	void GetMobileSubscribeCfg() {
 
 		NET_MOBILE_PUSH_NOTIFY_CFG stuIn = new NET_MOBILE_PUSH_NOTIFY_CFG(1);
-		String strRegisterID = "Demo-APA91bFMDi7xJ4zW2uebY8_2EdFEyJ4ew6_BAX2_ck-povlLgf2xs4JwIr7O8b-VAtJQVFHwj-k9DVuTZ3qKtGujeH25RGcP-vXxyd-p4_fQRkocc8h_hv0IzfDB80wQqrsOHJ517Cg-utvc41o1CuR7EmkvqCYMHA"; // this is a mobile id registration on google GCM service
+		String strRegisterID = "REGISTER_ID"; // this is a mobile id registration on google GCM service
 		String strAppID = "com_company_Demo";
 		System.arraycopy(strRegisterID.getBytes(), 0, stuIn.szRegisterID, 0, strRegisterID.getBytes().length);
 		System.arraycopy(strAppID.getBytes(), 0, stuIn.szAppID, 0, strAppID.getBytes().length);
@@ -5821,11 +5821,11 @@ public class TestInterfaceActivity extends ListActivity {
 	// 手机订阅推送信息StartListenEx
 	void MobileSubscribeCfg() {
 		/*-----------------SetMobileSubscribeCfg接口测试-----------------*/
-		String strRegisterID = "Demo-APA91bFMDi7xJ4zW2uebY8_2EdFEyJ4ew6_BAX2_ck-povlLgf2xs4JwIr7O8b-VAtJQVFHwj-k9DVuTZ3qKtGujeH25RGcP-vXxyd-p4_fQRkocc8h_hv0IzfDB80wQqrsOHJ517Cg-utvc41o1CuR7EmkvqCYMHA"; // this is a mobile id registration on google GCM service
+		String strRegisterID = "REGISTER_ID"; // this is a mobile id registration on google GCM service
 		String strAppID = "com_company_Demo";
-		String strDevId = "8507de90-58d4-44da-8248-3503225f4159"; // you can use this id to discriminate event msg come different device
-		String strUser = "AIzaSyDXwrcImAjxWhNC4WYqygjXEDS-Z83hBMo"; // API Key, get from google service
-		String strUserEx = "AIzaSyDXwrcImAjxWhNC4WYqygjXEDS-Z83hBMo11424325h32khtrj43ewnfj3w4r32h5k43hjtg4jfngjehfjewhgfkewhgjewfwetew";
+		String strDevId = "DEVICE_ID"; // you can use this id to discriminate event msg come different device
+		String strUser = "YOUR_API_KEY_HERE"; // API Key, get from google service
+		String strUserEx = "YOUR_API_KEY_HERE"; // API Key, get from google service
 		String strAuthServerAddr = "https://www.google.com/accounts/ClientLogin";
 		String strPushServerAddr = "https://android.googleapis.com/gcm/send";
 		String strMainAddr = "https://android.googleapis.com/gcm/send";
@@ -5888,7 +5888,7 @@ public class TestInterfaceActivity extends ListActivity {
 		String strRedirectAddr = ""; // not used
 		String strDevName = "Device01_NVR"; // device name
 		String strDevID = "468101c5"; // device id
-		String strUser = "AIzaSyDXwrcImAjxWhNC4WYqygjXEDS-Z83hBMo"; // API Key get from google service
+		String strUser = ""; // API Key get from google service
 		String strPsw = ""; //
 		String strCertificate = ""; //is used just on iOS
 		String strSecretKey = ""; // not used
@@ -19274,7 +19274,7 @@ public class TestInterfaceActivity extends ListActivity {
 
 	public void TransmitInfoForWeb() {
 
-		String msg = "{\"method\":\"configManager.setConfig\",\"params\":{\"table\":{\"eyQTch_kLfs:APA91bHQ67JXaYuWrLPHrpaIuygCxmYkvkncz3i8JR4yoJm2oENWmOxSeHfPi0ZnB4q4a1HpXqtLGVxtYRD-YJPVHTRStYyLQIhMiS0Id7PJtvxX3FYTdk2LqsX2FGA6tH1X9YlJS95-\":{\"ServerType\":\"Android\",\"PeriodOfValidity\":1471228928,\"AuthServerAddr\":\"https:\\/\\/www.google.com\\/accounts\\/ClientLogin\",\"AuthServerPort\":443,\"PushServerAddr\":\"https:\\/\\/fcmcellphonepush.ecosightsecurity.com\\/fcm\\/send\",\"PushServerPort\":443,\"PushServerMain\":{\"Address\":\"https:\\/\\/fcmcellphonepush.ecosightsecurity.com\\/fcm\\/send\",\"Port\":443},\"User\":\"AIzaSyClYqCIZ76QC9fHU8tA9Gq4CKITUFykeDU\",\"Certificate\":\"\",\"SecretKey\":\"\",\"DevName\":\"LHV8AB3A0BD5\",\"DevID\":\"7de14b29-d5db-427b-a69c-d03d8287c51b\",\"Subscribes\":[{\"Code\":\"VideoMotion\",\"SubCode\":null,\"Indexs\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},{\"Code\":\"StorageFailure\",\"SubCode\":null},{\"Code\":\"StorageNotExist\",\"SubCode\":null},{\"Code\":\"AlarmLocal\",\"SubCode\":null,\"Indexs\":[0,1,2,3]},{\"Code\":\"StorageLowSpace\",\"SubCode\":null},{\"Code\":\"VideoBlind\",\"SubCode\":null,\"Indexs\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}]}},\"name\":\"MobilePushNotification\",\"channel\":-1}}";
+		String msg = "{\"method\":\"configManager.setConfig\",\"params\":{\"table\":{\"-\":{\"ServerType\":\"Android\",\"PeriodOfValidity\":1471228928,\"AuthServerAddr\":\"https:\\/\\/www.google.com\\/accounts\\/ClientLogin\",\"AuthServerPort\":443,\"PushServerAddr\":\"https:\\/\\/fcmcellphonepush.ecosightsecurity.com\\/fcm\\/send\",\"PushServerPort\":443,\"PushServerMain\":{\"Address\":\"https:\\/\\/fcmcellphonepush.ecosightsecurity.com\\/fcm\\/send\",\"Port\":443},\"User\":\"\",\"Certificate\":\"\",\"SecretKey\":\"\",\"DevName\":\"LHV8AB3A0BD5\",\"DevID\":\"7de14b29-d5db-427b-a69c-d03d8287c51b\",\"Subscribes\":[{\"Code\":\"VideoMotion\",\"SubCode\":null,\"Indexs\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},{\"Code\":\"StorageFailure\",\"SubCode\":null},{\"Code\":\"StorageNotExist\",\"SubCode\":null},{\"Code\":\"AlarmLocal\",\"SubCode\":null,\"Indexs\":[0,1,2,3]},{\"Code\":\"StorageLowSpace\",\"SubCode\":null},{\"Code\":\"VideoBlind\",\"SubCode\":null,\"Indexs\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}]}},\"name\":\"MobilePushNotification\",\"channel\":-1}}";
 //		String msg = "{\"object\":6,\"method\":\"windowManager.setMode\",\"params\":{\"window\":0,\"mode\":\"Split4\"}}";
 
 		byte[] stInbytes = new byte[msg.getBytes().length];

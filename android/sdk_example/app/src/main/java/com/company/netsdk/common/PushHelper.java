@@ -36,8 +36,8 @@ public class PushHelper implements C2DMRegisterListener {
 
     /// API KEY get from google
     /// The mApiKey is not "api_key":"current_key" form google-services.json
-    private String mApiKey = "AIzaSyAiPvjX0qzfdq72G41CssfGHQAIea7tl4g";
-    private String mGcmSenderId = "163569807662";
+    private String mApiKey = "YOUR_API_KEY_HERE";
+    private String mGcmSenderId = "YOUR_SENDER_ID_HERE";
     
     private final static String[] PUSHTYPE = {PUSH_TYPE_VIDEO_MOTION,PUSH_TYPE_VIDEO_BLIND,PUSH_TYPE_ALARM_LOCAL,
         PUSH_TYPE_NOANSWER_CALL,PUSH_TYPE_STORAGE_NOT_EXIST,PUSH_TYPE_STORAGE_LOW_SPACE,PUSH_TYPE_STORAGE_FAILURE};
