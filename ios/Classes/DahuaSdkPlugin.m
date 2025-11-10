@@ -157,6 +157,8 @@ static void DeviceSearchStreamCallback(const DHDeviceInfo* deviceInfo, void* use
     @"mac": [NSString stringWithUTF8String:deviceInfo->mac],
     @"port": @(deviceInfo->port),
     @"initialized": @(deviceInfo->initialized),
+    @"ipVersion": @(deviceInfo->ipVersion),
+    @"deviceType": [NSString stringWithUTF8String:deviceInfo->deviceType],
   };
   
   // Send to Flutter on main thread

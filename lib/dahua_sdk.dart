@@ -151,6 +151,8 @@ class DeviceInfo {
   final String mac;
   final int port;
   final bool initialized;
+  final int ipVersion;
+  final String deviceType;
 
   DeviceInfo({
     required this.serialNo,
@@ -158,6 +160,8 @@ class DeviceInfo {
     required this.mac,
     required this.port,
     required this.initialized,
+    this.ipVersion = 4,
+    this.deviceType = '',
   });
 
   factory DeviceInfo.fromMap(Map<String, dynamic> map) {
@@ -167,8 +171,18 @@ class DeviceInfo {
       mac: map['mac'] as String,
       port: map['port'] as int,
       initialized: map['initialized'] as bool,
+      ipVersion: map['ipVersion'] as int? ?? 4,
+      deviceType: map['deviceType'] as String? ?? '',
     );
   }
+
+  String get statusDescription {
+    if (initialized) return 'Ready to use';
+    return 'Not initialized - Setup required';
+  }
+
+  bool get isIPv4 => ipVersion == 4;
+  bool get isIPv6 => ipVersion == 6;
 }
 
 class DahuaSdk {

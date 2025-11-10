@@ -542,6 +542,11 @@ static void CALLBACK DeviceSearchCallback(DEVICE_NET_INFO_EX *pDevNetInfo, void*
     SearchContext* ctx = (SearchContext*)pUserData;
     if (!ctx || !ctx->callback || !pDevNetInfo) return;
     
+    // Filter: only process IPv4 devices (like in SearchDeviceViewController)
+    if (pDevNetInfo->iIPVersion != 4) {
+        return;
+    }
+    
     // Convert to DHDeviceInfo
     DHDeviceInfo deviceInfo;
     memset(&deviceInfo, 0, sizeof(deviceInfo));
@@ -549,13 +554,20 @@ static void CALLBACK DeviceSearchCallback(DEVICE_NET_INFO_EX *pDevNetInfo, void*
     strncpy(deviceInfo.serialNo, pDevNetInfo->szSerialNo, sizeof(deviceInfo.serialNo) - 1);
     strncpy(deviceInfo.ip, pDevNetInfo->szIP, sizeof(deviceInfo.ip) - 1);
     strncpy(deviceInfo.mac, pDevNetInfo->szMac, sizeof(deviceInfo.mac) - 1);
+    strncpy(deviceInfo.deviceType, pDevNetInfo->szDeviceType, sizeof(deviceInfo.deviceType) - 1);
     deviceInfo.port = pDevNetInfo->nPort;
+    deviceInfo.ipVersion = pDevNetInfo->iIPVersion;
     
     // Check if device is initialized
     // byInitStatus & 0x01 == 0 means not initialized
     // (byInitStatus >> 1) & 0x01 == 1 means can be initialized
     deviceInfo.initialized = !((pDevNetInfo->byInitStatus & 0x01) == 0 && 
                                ((pDevNetInfo->byInitStatus >> 1) & 0x01) == 1);
+    
+    // Log found device
+    NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Found device: SN=%s IP=%s MAC=%s Type=%s Init=%d",
+                     deviceInfo.serialNo, deviceInfo.ip, deviceInfo.mac, deviceInfo.deviceType, deviceInfo.initialized];
+    NSLog(@"%@", msg);
     
     // Call the callback
     ctx->callback(&deviceInfo, ctx->userData);

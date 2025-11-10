@@ -36,6 +36,15 @@ class _DeviceSearchViewState extends State<DeviceSearchView> {
       _searchSubscription = DahuaSdk.searchDeviceBySerial().listen(
         (device) {
           setState(() {
+            // Filter by serial number if specified
+            if (_serialController.text.isNotEmpty) {
+              if (!device.serialNo.toLowerCase().contains(
+                _serialController.text.toLowerCase(),
+              )) {
+                return; // Skip this device
+              }
+            }
+
             // Only add if not already in list
             if (!_foundDevices.any((d) => d.serialNo == device.serialNo)) {
               _foundDevices.add(device);
@@ -99,10 +108,21 @@ class _DeviceSearchViewState extends State<DeviceSearchView> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    TextField(
+                      controller: _serialController,
+                      decoration: const InputDecoration(
+                        labelText: 'Filter by Serial Number (optional)',
+                        hintText: 'Enter partial serial number',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.filter_alt),
+                      ),
+                      enabled: !_isSearching,
+                    ),
+                    const SizedBox(height: 12),
                     const Text(
                       'This will search for all Dahua devices on the local network. '
-                      'Make sure your device is powered on and connected to the same network.',
-                      style: TextStyle(color: Colors.grey),
+                      'You can filter results by entering a serial number above.',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
@@ -198,10 +218,16 @@ class _DeviceSearchViewState extends State<DeviceSearchView> {
                                 const SizedBox(height: 4),
                                 Text('IP: ${device.ip}:${device.port}'),
                                 Text('MAC: ${device.mac}'),
+                                if (device.deviceType.isNotEmpty)
+                                  Text(
+                                    'Type: ${device.deviceType}',
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 Text(
-                                  device.initialized
-                                      ? 'Status: Initialized'
-                                      : 'Status: Not initialized',
+                                  device.statusDescription,
                                   style: TextStyle(
                                     color: device.initialized
                                         ? Colors.green

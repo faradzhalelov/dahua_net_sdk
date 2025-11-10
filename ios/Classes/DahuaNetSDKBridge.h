@@ -62,6 +62,8 @@ typedef struct {
     char mac[64];
     int port;
     bool initialized;
+    int ipVersion;      // 4 for IPv4, 6 for IPv6
+    char deviceType[64]; // Device type string
 } DHDeviceInfo;
 
 // Callback for device search results
