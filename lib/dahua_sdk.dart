@@ -102,6 +102,48 @@ class WlanConfig {
   }
 }
 
+/// WiFi device (access point) information from scan
+class WlanDevice {
+  final String ssid;
+  final int authMode;
+  final int encryptionAlg;
+  final int signalLevel; // 0-100
+
+  WlanDevice({
+    required this.ssid,
+    required this.authMode,
+    required this.encryptionAlg,
+    required this.signalLevel,
+  });
+
+  factory WlanDevice.fromMap(Map<String, dynamic> map) {
+    return WlanDevice(
+      ssid: map['ssid'] as String,
+      authMode: map['authMode'] as int,
+      encryptionAlg: map['encryptionAlg'] as int,
+      signalLevel: map['signalLevel'] as int,
+    );
+  }
+
+  String get securityDescription {
+    if (authMode == 5 && encryptionAlg == 6) return 'WPA2-PSK-AES';
+    if (authMode == 5 && encryptionAlg == 5) return 'WPA2-PSK-TKIP';
+    if (authMode == 3 && encryptionAlg == 6) return 'WPA-PSK-AES';
+    if (authMode == 3 && encryptionAlg == 5) return 'WPA-PSK-TKIP';
+    if (authMode == 0 && encryptionAlg == 4) return 'WEP';
+    if (authMode == 0 && encryptionAlg == 0) return 'Open';
+    return 'Mixed/Other';
+  }
+
+  String get signalStrengthDescription {
+    if (signalLevel >= 80) return 'Excellent';
+    if (signalLevel >= 60) return 'Good';
+    if (signalLevel >= 40) return 'Fair';
+    if (signalLevel >= 20) return 'Weak';
+    return 'Very Weak';
+  }
+}
+
 class DahuaSdk {
   static const _ch = MethodChannel('dahua_sdk');
   static bool _handlerInstalled = false;
@@ -199,6 +241,26 @@ class DahuaSdk {
     } catch (e) {
       debugPrint('[DahuaSdk] setWlanConfig error: $e');
       return false;
+    }
+  }
+
+  /// Scan for available WiFi devices/networks
+  /// [handle] - login handle from device login
+  /// Returns list of available WiFi networks with signal strength and security info
+  static Future<List<WlanDevice>> scanWlanDevices(int handle) async {
+    try {
+      final result = await _ch.invokeMethod('scanWlanDevices', {
+        'handle': handle,
+      });
+      if (result is List) {
+        return result
+            .map((item) => WlanDevice.fromMap(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[DahuaSdk] scanWlanDevices error: $e');
+      return [];
     }
   }
 }

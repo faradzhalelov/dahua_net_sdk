@@ -485,4 +485,39 @@ bool dh_set_wlan_config(DHHandle login, const DHWlanConfig* config) {
     return (bool)bRet;
 }
 
+int dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices) {
+    if (!devices || maxDevices <= 0) return 0;
+    
+    DHDEV_WLAN_DEVICE_LIST_EX2 st;
+    memset(&st, 0, sizeof(st));
+    st.dwSize = sizeof(st);
+    
+    unsigned int retLen = 0;
+    BOOL bRet = CLIENT_GetDevConfig((LLONG)login, DH_DEV_WLAN_DEVICE_CFG_EX2, -1, &st, sizeof(st), &retLen, 5000);
+    
+    if (bRet) {
+        int count = st.bWlanDevCount;
+        if (count > maxDevices) count = maxDevices;
+        
+        for (int i = 0; i < count; i++) {
+            strncpy(devices[i].ssid, st.lstWlanDev[i].szSSID, sizeof(devices[i].ssid) - 1);
+            devices[i].authMode = st.lstWlanDev[i].byAuthMode;
+            devices[i].encryptionAlg = st.lstWlanDev[i].byEncrAlgr;
+            devices[i].signalLevel = st.lstWlanDev[i].byLinkQuality; // 0-100%
+        }
+        
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Scanned %d WiFi devices", count];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        
+        return count;
+    } else {
+        int errCode = CLIENT_GetLastError() & 0x7fffffff;
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] WiFi scan failed: error=%d", errCode];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        return 0;
+    }
+}
+
 #endif

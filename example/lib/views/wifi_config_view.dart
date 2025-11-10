@@ -3,8 +3,13 @@ import 'package:dahua_sdk/dahua_sdk.dart';
 
 class WifiConfigView extends StatefulWidget {
   final int loginHandle;
+  final WlanDevice? prefilledDevice;
 
-  const WifiConfigView({super.key, required this.loginHandle});
+  const WifiConfigView({
+    super.key,
+    required this.loginHandle,
+    this.prefilledDevice,
+  });
 
   @override
   State<WifiConfigView> createState() => _WifiConfigViewState();
@@ -25,7 +30,26 @@ class _WifiConfigViewState extends State<WifiConfigView> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentConfig();
+    if (widget.prefilledDevice != null) {
+      _prefillFromDevice(widget.prefilledDevice!);
+    } else {
+      _loadCurrentConfig();
+    }
+  }
+
+  void _prefillFromDevice(WlanDevice device) {
+    setState(() {
+      _ssidController.text = device.ssid;
+      _authMode = WlanAuthMode.values.firstWhere(
+        (e) => e.value == device.authMode,
+        orElse: () => WlanAuthMode.wpa2Psk,
+      );
+      _encryptionAlg = WlanEncryptionAlg.values.firstWhere(
+        (e) => e.value == device.encryptionAlg,
+        orElse: () => WlanEncryptionAlg.aes,
+      );
+      _statusMessage = 'Configure WiFi: ${device.ssid}';
+    });
   }
 
   @override

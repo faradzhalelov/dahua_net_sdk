@@ -83,6 +83,34 @@ static FlutterMethodChannel* s_channel = nil;
     
     BOOL ok = dh_set_wlan_config((DHHandle)handle.longLongValue, &config);
     result(@(ok));
+  } else if ([@"scanWlanDevices" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSNumber* handle = args[@"handle"];
+    
+    // Allocate array for up to 128 devices (max supported by SDK)
+    DHWlanDevice* devices = (DHWlanDevice*)malloc(sizeof(DHWlanDevice) * 128);
+    memset(devices, 0, sizeof(DHWlanDevice) * 128);
+    
+    int count = dh_scan_wlan_devices((DHHandle)handle.longLongValue, devices, 128);
+    
+    if (count > 0) {
+      NSMutableArray* deviceList = [NSMutableArray arrayWithCapacity:count];
+      for (int i = 0; i < count; i++) {
+        [deviceList addObject:@{
+          @"ssid": [NSString stringWithUTF8String:devices[i].ssid],
+          @"authMode": @(devices[i].authMode),
+          @"encryptionAlg": @(devices[i].encryptionAlg),
+          @"signalLevel": @(devices[i].signalLevel),
+        }];
+      }
+      free(devices);
+      result(deviceList);
+    } else {
+      free(devices);
+      result([FlutterError errorWithCode:@"SCAN_FAILED"
+                                 message:@"Failed to scan WiFi devices"
+                                 details:nil]);
+    }
   } else if ([@"getPlatformVersion" isEqualToString:call.method]) {
     result([@"iOS " stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else {

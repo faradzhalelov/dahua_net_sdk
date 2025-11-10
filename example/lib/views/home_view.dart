@@ -6,6 +6,7 @@ import 'single_channel_view.dart';
 import 'dual_channel_view.dart';
 import 'quad_channel_view.dart';
 import 'wifi_config_navigator.dart';
+import 'wifi_list_navigator.dart';
 
 class HomeView extends StatefulWidget {
   final CameraViewModel viewModel;
@@ -185,6 +186,23 @@ class _HomeViewState extends State<HomeView> {
           enabled: canConnect,
           onPressed: () =>
               _navigateToView(QuadChannelView(config: widget.viewModel.config)),
+        ),
+        const SizedBox(height: 12),
+        _buildButton(
+          label: 'WiFi List & Scan',
+          icon: Icons.wifi,
+          color: Colors.teal,
+          enabled: canConnect,
+          onPressed: () {
+            if (!_updateAndValidateConfig()) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    WifiListNavigator(config: widget.viewModel.config),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 12),
         _buildButton(
