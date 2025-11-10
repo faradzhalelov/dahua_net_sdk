@@ -24,6 +24,36 @@ void     dh_stop_realplay(DHHandle realplay);
 /// PTZ: cmd/speed/stop - параметры зависят от netsdk.h (замените на реальные значения)
 bool     dh_ptz_control(DHHandle loginOrReal, int cmd, int speed, bool start);
 
+/// WiFi Configuration
+// Structure for WiFi configuration
+typedef struct {
+    char ssid[128];
+    char password[128];
+    int authMode;      // Authentication mode (0=OPEN, 1=SHARED, 2=WPA, 3=WPA-PSK, 4=WPA2, 5=WPA2-PSK, etc.)
+    int encryptionAlg; // Encryption algorithm (0=NONE, 4=WEP, 5=TKIP, 6=AES, 7=TKIP+AES)
+    int encryption;    // Combined encryption mode (calculated from authMode + encryptionAlg)
+    bool enabled;
+    bool connectEnabled;
+} DHWlanConfig;
+
+// Get WiFi configuration from device
+bool     dh_get_wlan_config(DHHandle login, DHWlanConfig* config);
+// Set WiFi configuration to device
+bool     dh_set_wlan_config(DHHandle login, const DHWlanConfig* config);
+
+/// WiFi Device Scanning
+// Structure for a single WiFi device (access point)
+typedef struct {
+    char ssid[128];
+    int authMode;      // Authentication mode
+    int encryptionAlg; // Encryption algorithm
+    int signalLevel;   // Signal strength (0-100)
+} DHWlanDevice;
+
+// Scan for available WiFi devices/networks
+// Returns number of devices found, fills devices array (max 128 devices)
+int      dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices);
+
 #ifdef __cplusplus
 }
 #endif

@@ -51,9 +51,28 @@ bool dh_ptz_control(DHHandle login, int cmd, int speed, bool start) {
     return false;
 }
 
+bool dh_get_wlan_config(DHHandle login, DHWlanConfig* config) {
+    NSLog(@"[DahuaBridge] Simulator: dh_get_wlan_config() stub — returns false");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_get_wlan_config() stub — returns false"];
+    return false;
+}
+
+bool dh_set_wlan_config(DHHandle login, const DHWlanConfig* config) {
+    NSLog(@"[DahuaBridge] Simulator: dh_set_wlan_config() stub — returns false");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_set_wlan_config() stub — returns false"];
+    return false;
+}
+
+int dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices) {
+    NSLog(@"[DahuaBridge] Simulator: dh_scan_wlan_devices() stub — returns 0");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_scan_wlan_devices() stub — returns 0"];
+    return 0;
+}
+
 #else
 
 #import "3rdparty/include/netsdk.h"
+#import "3rdparty/include/configsdk.h"
 #import "3rdparty/include/play.h"
 
 // Структура для хранения контекста воспроизведения
@@ -309,15 +328,161 @@ void dh_stop_realplay(DHHandle realplay) {
 }
 
 bool dh_ptz_control(DHHandle login, int cmd, int speed, bool start) {
-    BOOL ok = CLIENT_DHPTZControlEx2((LLONG)login, 
-                                     0,
-                                     cmd,
-                                     0,
-                                     start ? 0 : 1,
-                                     0,
-                                     NULL,
-                                     0);
-    return ok ? true : false;
+    BOOL ok = CLIENT_DHPTZControlEx2((LLONG)login, cmd, speed, speed, speed, start, 0);
+    NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] PTZ cmd=%d speed=%d start=%d => %d", cmd, speed, (int)start, (int)ok];
+    NSLog(@"%@", msg);
+    [DahuaSdkPlugin emitLog:msg];
+    return (bool)ok;
+}
+
+// Helper: Calculate encryption mode from authMode and encryptionAlg (from APConfigViewController)
+static int calculateEncryption(int byAuthMode, int byEncrAlgr) {
+    int nEncryption = 0;
+    if(byAuthMode == 6 && byEncrAlgr == 0) nEncryption = 0;
+    else if(byAuthMode == 0 && byEncrAlgr == 0) nEncryption = 1;
+    else if(byAuthMode == 0 && byEncrAlgr == 4) nEncryption = 2;
+    else if(byAuthMode == 1 && byEncrAlgr == 4) nEncryption = 3;
+    else if(byAuthMode == 2 && byEncrAlgr == 5) nEncryption = 4;
+    else if(byAuthMode == 3 && byEncrAlgr == 5) nEncryption = 5;
+    else if(byAuthMode == 4 && byEncrAlgr == 5) nEncryption = 6;
+    else if(byAuthMode == 5 && byEncrAlgr == 5) nEncryption = 7;
+    else if(byAuthMode == 2 && byEncrAlgr == 6) nEncryption = 8;
+    else if(byAuthMode == 3 && byEncrAlgr == 6) nEncryption = 9;
+    else if(byAuthMode == 4 && byEncrAlgr == 6) nEncryption = 10;
+    else if(byAuthMode == 5 && byEncrAlgr == 6) nEncryption = 11;
+    else if(byAuthMode == 2 && byEncrAlgr == 7) nEncryption = 8;
+    else if(byAuthMode == 3 && byEncrAlgr == 7) nEncryption = 9;
+    else if(byAuthMode == 4 && byEncrAlgr == 7) nEncryption = 10;
+    else if(byAuthMode == 5 && byEncrAlgr == 7) nEncryption = 11;
+    else if(byAuthMode == 7) {
+        if(byEncrAlgr == 5) nEncryption = 7;
+        else if(byEncrAlgr == 6) nEncryption = 11;
+        else if(byEncrAlgr == 7) nEncryption = 11;
+        else nEncryption = 12;
+    }
+    else if(byAuthMode == 8) {
+        if(byEncrAlgr == 5) nEncryption = 6;
+        else if(byEncrAlgr == 6) nEncryption = 10;
+        else if(byEncrAlgr == 7) nEncryption = 10;
+        else nEncryption = 12;
+    }
+    else if(byAuthMode == 9) {
+        if(byEncrAlgr == 5) nEncryption = 5;
+        else if(byEncrAlgr == 6) nEncryption = 9;
+        else if(byEncrAlgr == 7) nEncryption = 9;
+        else nEncryption = 12;
+    }
+    else if(byAuthMode == 10) {
+        if(byEncrAlgr == 5) nEncryption = 7;
+        else if(byEncrAlgr == 6) nEncryption = 11;
+        else if(byEncrAlgr == 7) nEncryption = 11;
+        else nEncryption = 12;
+    }
+    else if(byAuthMode == 11) {
+        if(byEncrAlgr == 5) nEncryption = 7;
+        else if(byEncrAlgr == 6) nEncryption = 11;
+        else if(byEncrAlgr == 7) nEncryption = 11;
+        else nEncryption = 12;
+    } else {
+        nEncryption = 12;
+    }
+    return nEncryption;
+}
+
+bool dh_get_wlan_config(DHHandle login, DHWlanConfig* config) {
+    if (!config) return false;
+    
+    char *pszBuf = new char[1024*10];
+    memset(pszBuf, 0, 1024*10);
+    int nError = 0;
+    
+    BOOL bRet = CLIENT_GetNewDevConfig((LLONG)login, (char*)CFG_CMD_WLAN, -1, pszBuf, 1024*10, &nError, 10000);
+    if (bRet) {
+        CFG_NETAPP_WLAN stCfg;
+        memset(&stCfg, 0, sizeof(stCfg));
+        CLIENT_ParseData((char*)CFG_CMD_WLAN, pszBuf, &stCfg, sizeof(stCfg), NULL);
+        
+        // Extract first WiFi config
+        strncpy(config->ssid, stCfg.stuWlanInfo[0].szSSID, sizeof(config->ssid) - 1);
+        strncpy(config->password, stCfg.stuWlanInfo[0].szKeys[0], sizeof(config->password) - 1);
+        config->enabled = stCfg.stuWlanInfo[0].bEnable;
+        config->connectEnabled = stCfg.stuWlanInfo[0].bConnectEnable;
+        config->encryption = stCfg.stuWlanInfo[0].nEncryption;
+        
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Get WLAN config: SSID='%s', encryption=%d", 
+                        config->ssid, config->encryption];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    } else {
+        int errCode = CLIENT_GetLastError() & 0x7fffffff;
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Get WLAN config failed: error=%d", errCode];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    }
+    
+    delete[] pszBuf;
+    return (bool)bRet;
+}
+
+bool dh_set_wlan_config(DHHandle login, const DHWlanConfig* config) {
+    if (!config) return false;
+    
+    char *pszBuf = new char[1024*10];
+    memset(pszBuf, 0, 1024*10);
+    int nError = 0;
+    
+    // First get current config
+    BOOL bRet = CLIENT_GetNewDevConfig((LLONG)login, (char*)CFG_CMD_WLAN, -1, pszBuf, 1024*10, &nError, 10000);
+    if (bRet) {
+        CFG_NETAPP_WLAN stCfg;
+        memset(&stCfg, 0, sizeof(stCfg));
+        CLIENT_ParseData((char*)CFG_CMD_WLAN, pszBuf, &stCfg, sizeof(stCfg), NULL);
+        
+        // Update with new values
+        strncpy(stCfg.stuWlanInfo[0].szSSID, config->ssid, sizeof(stCfg.stuWlanInfo[0].szSSID) - 1);
+        strncpy(stCfg.stuWlanInfo[0].szKeys[0], config->password, sizeof(stCfg.stuWlanInfo[0].szKeys[0]) - 1);
+        
+        stCfg.stuWlanInfo[0].bEnable = config->enabled ? YES : NO;
+        stCfg.stuWlanInfo[0].bConnectEnable = config->connectEnabled ? YES : NO;
+        stCfg.stuWlanInfo[0].nKeyID = 0;
+        stCfg.stuWlanInfo[0].bKeyFlag = NO;
+        stCfg.stuWlanInfo[0].bLinkEnable = YES;
+        stCfg.stuWlanInfo[0].nLinkMode = 0;
+        
+        // Calculate encryption from authMode and encryptionAlg
+        int nEncryption = calculateEncryption(config->authMode, config->encryptionAlg);
+        stCfg.stuWlanInfo[0].nEncryption = nEncryption;
+        
+        strncpy(stCfg.stuWlanInfo[0].stuNetwork.szDnsServers[0], "8.8.8.8", 
+                sizeof(stCfg.stuWlanInfo[0].stuNetwork.szDnsServers[0]) - 1);
+        strncpy(stCfg.stuWlanInfo[0].stuNetwork.szDnsServers[1], "8.8.4.4", 
+                sizeof(stCfg.stuWlanInfo[0].stuNetwork.szDnsServers[1]) - 1);
+        
+        memset(pszBuf, 0, 1024*10);
+        CLIENT_PacketData((char*)CFG_CMD_WLAN, &stCfg, sizeof(stCfg), pszBuf, 1024*10);
+        
+        bRet = CLIENT_SetNewDevConfig((LLONG)login, (char*)CFG_CMD_WLAN, -1, pszBuf, 1024*10, &nError, NULL, 10000);
+        
+        if (bRet) {
+            NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Set WLAN config success: SSID='%s', encryption=%d", 
+                            config->ssid, nEncryption];
+            NSLog(@"%@", msg);
+            [DahuaSdkPlugin emitLog:msg];
+        } else {
+            int errCode = CLIENT_GetLastError() & 0x7fffffff;
+            NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Set WLAN config failed: error=%d", errCode];
+            NSLog(@"%@", msg);
+            [DahuaSdkPlugin emitLog:msg];
+        }
+    } else {
+        int errCode = CLIENT_GetLastError() & 0x7fffffff;
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Get WLAN config (for set) failed: error=%d", errCode];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    }
+    
+    delete[] pszBuf;
+    return (bool)bRet;
 }
 
 #endif

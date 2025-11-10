@@ -5,6 +5,7 @@ import '../widgets/status_card.dart';
 import 'single_channel_view.dart';
 import 'dual_channel_view.dart';
 import 'quad_channel_view.dart';
+import 'wifi_config_navigator.dart';
 
 class HomeView extends StatefulWidget {
   final CameraViewModel viewModel;
@@ -184,6 +185,25 @@ class _HomeViewState extends State<HomeView> {
           enabled: canConnect,
           onPressed: () =>
               _navigateToView(QuadChannelView(config: widget.viewModel.config)),
+        ),
+        const SizedBox(height: 12),
+        _buildButton(
+          label: 'WiFi Configuration (AP Config)',
+          icon: Icons.wifi_tethering,
+          color: Colors.purple,
+          enabled: canConnect,
+          onPressed: () {
+            if (!_updateAndValidateConfig()) return;
+            // For WiFi config, we need a login handle
+            // We'll navigate and let the view handle login
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    WifiConfigNavigator(config: widget.viewModel.config),
+              ),
+            );
+          },
         ),
       ],
     );
