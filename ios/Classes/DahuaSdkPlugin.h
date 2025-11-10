@@ -1,6 +1,6 @@
 #import <Flutter/Flutter.h>
 
-@interface DahuaSdkPlugin : NSObject<FlutterPlugin>
+@interface DahuaSdkPlugin : NSObject<FlutterPlugin, FlutterStreamHandler>
 /// Emit a debug log message from native to Dart (flutter run console).
 + (void)emitLog:(NSString*)message;
 @end

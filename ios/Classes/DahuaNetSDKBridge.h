@@ -54,6 +54,26 @@ typedef struct {
 // Returns number of devices found, fills devices array (max 128 devices)
 int      dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices);
 
+/// Device Search by Serial Number
+// Structure for device network info
+typedef struct {
+    char serialNo[128];
+    char ip[64];
+    char mac[64];
+    int port;
+    bool initialized;
+} DHDeviceInfo;
+
+// Callback for device search results
+typedef void (*DHDeviceSearchCallback)(const DHDeviceInfo* device, void* userData);
+
+// Start searching for devices on network
+// Returns search handle (> 0 on success, 0 on failure)
+DHHandle dh_start_search_devices(DHDeviceSearchCallback callback, void* userData);
+
+// Stop device search
+void     dh_stop_search_devices(DHHandle searchHandle);
+
 #ifdef __cplusplus
 }
 #endif

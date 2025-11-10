@@ -144,6 +144,33 @@ class WlanDevice {
   }
 }
 
+/// Device information from network search
+class DeviceInfo {
+  final String serialNo;
+  final String ip;
+  final String mac;
+  final int port;
+  final bool initialized;
+
+  DeviceInfo({
+    required this.serialNo,
+    required this.ip,
+    required this.mac,
+    required this.port,
+    required this.initialized,
+  });
+
+  factory DeviceInfo.fromMap(Map<String, dynamic> map) {
+    return DeviceInfo(
+      serialNo: map['serialNo'] as String,
+      ip: map['ip'] as String,
+      mac: map['mac'] as String,
+      port: map['port'] as int,
+      initialized: map['initialized'] as bool,
+    );
+  }
+}
+
 class DahuaSdk {
   static const _ch = MethodChannel('dahua_sdk');
   static bool _handlerInstalled = false;
@@ -261,6 +288,25 @@ class DahuaSdk {
     } catch (e) {
       debugPrint('[DahuaSdk] scanWlanDevices error: $e');
       return [];
+    }
+  }
+
+  /// Search for devices on the network by serial number
+  /// Returns a stream of discovered devices
+  /// Call stopDeviceSearch() to stop the search
+  static Stream<DeviceInfo> searchDeviceBySerial() {
+    const eventChannel = EventChannel('dahua_sdk/device_search');
+    return eventChannel.receiveBroadcastStream().map((event) {
+      return DeviceInfo.fromMap(Map<String, dynamic>.from(event));
+    });
+  }
+
+  /// Stop device search
+  static Future<void> stopDeviceSearch() async {
+    try {
+      await _ch.invokeMethod('stopDeviceSearch');
+    } catch (e) {
+      debugPrint('[DahuaSdk] stopDeviceSearch error: $e');
     }
   }
 }

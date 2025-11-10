@@ -7,6 +7,7 @@ import 'dual_channel_view.dart';
 import 'quad_channel_view.dart';
 import 'wifi_config_navigator.dart';
 import 'wifi_list_navigator.dart';
+import 'device_search_view.dart';
 
 class HomeView extends StatefulWidget {
   final CameraViewModel viewModel;
@@ -201,6 +202,19 @@ class _HomeViewState extends State<HomeView> {
                 builder: (_) =>
                     WifiListNavigator(config: widget.viewModel.config),
               ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildButton(
+          label: 'Device Search (Network Discovery)',
+          icon: Icons.search,
+          color: Colors.indigo,
+          enabled: true, // Device search doesn't require connection
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DeviceSearchView()),
             );
           },
         ),

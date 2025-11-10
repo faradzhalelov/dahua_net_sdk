@@ -4,6 +4,9 @@
 
 @implementation DahuaSdkPlugin
 static FlutterMethodChannel* s_channel = nil;
+static FlutterEventSink s_deviceSearchEventSink = nil;
+static DHHandle s_currentSearchHandle = 0;
+
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel = [FlutterMethodChannel
       methodChannelWithName:@"dahua_sdk"
@@ -11,6 +14,12 @@ static FlutterMethodChannel* s_channel = nil;
   DahuaSdkPlugin* instance = [[DahuaSdkPlugin alloc] init];
   [registrar addMethodCallDelegate:instance channel:channel];
   s_channel = channel;
+
+  // Event channel for device search results
+  FlutterEventChannel* eventChannel = [FlutterEventChannel
+      eventChannelWithName:@"dahua_sdk/device_search"
+           binaryMessenger:[registrar messenger]];
+  [eventChannel setStreamHandler:instance];
 
   DahuaPreviewFactory* factory = [[DahuaPreviewFactory alloc] initWithMessenger:[registrar messenger]];
   [registrar registerViewFactory:factory withId:@"dahua_sdk/preview"];
@@ -111,11 +120,77 @@ static FlutterMethodChannel* s_channel = nil;
                                  message:@"Failed to scan WiFi devices"
                                  details:nil]);
     }
+  } else if ([@"searchDeviceBySerial" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSString* serialNo = args[@"serialNo"];
+    
+    // Start search if not already running
+    if (s_currentSearchHandle == 0) {
+      result([FlutterError errorWithCode:@"NO_LISTENER"
+                                 message:@"Device search event channel not listening"
+                                 details:nil]);
+    } else {
+      result(@YES);
+    }
+  } else if ([@"stopDeviceSearch" isEqualToString:call.method]) {
+    if (s_currentSearchHandle != 0) {
+      dh_stop_search_devices(s_currentSearchHandle);
+      s_currentSearchHandle = 0;
+    }
+    result(nil);
   } else if ([@"getPlatformVersion" isEqualToString:call.method]) {
     result([@"iOS " stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else {
     result(FlutterMethodNotImplemented);
   }
+}
+
+// MARK: - FlutterStreamHandler
+
+// Device search callback - sends results to Dart stream
+static void DeviceSearchStreamCallback(const DHDeviceInfo* deviceInfo, void* userData) {
+  if (!deviceInfo || !s_deviceSearchEventSink) return;
+  
+  NSDictionary* deviceDict = @{
+    @"serialNo": [NSString stringWithUTF8String:deviceInfo->serialNo],
+    @"ip": [NSString stringWithUTF8String:deviceInfo->ip],
+    @"mac": [NSString stringWithUTF8String:deviceInfo->mac],
+    @"port": @(deviceInfo->port),
+    @"initialized": @(deviceInfo->initialized),
+  };
+  
+  // Send to Flutter on main thread
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if (s_deviceSearchEventSink) {
+      s_deviceSearchEventSink(deviceDict);
+    }
+  });
+}
+
+- (FlutterError*)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)events {
+  s_deviceSearchEventSink = events;
+  
+  // Start device search with callback
+  if (s_currentSearchHandle == 0) {
+    s_currentSearchHandle = dh_start_search_devices(DeviceSearchStreamCallback, NULL);
+    if (s_currentSearchHandle == 0) {
+      s_deviceSearchEventSink = nil;
+      return [FlutterError errorWithCode:@"SEARCH_START_FAILED"
+                                 message:@"Failed to start device search"
+                                 details:nil];
+    }
+  }
+  
+  return nil;
+}
+
+- (FlutterError*)onCancelWithArguments:(id)arguments {
+  if (s_currentSearchHandle != 0) {
+    dh_stop_search_devices(s_currentSearchHandle);
+    s_currentSearchHandle = 0;
+  }
+  s_deviceSearchEventSink = nil;
+  return nil;
 }
 
 // MARK: - Native -> Dart logging

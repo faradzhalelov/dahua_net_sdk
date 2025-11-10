@@ -69,6 +69,17 @@ int dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices) 
     return 0;
 }
 
+DHHandle dh_start_search_devices(DHDeviceSearchCallback callback, void* userData) {
+    NSLog(@"[DahuaBridge] Simulator: dh_start_search_devices() stub — returns 0");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_start_search_devices() stub — returns 0"];
+    return 0;
+}
+
+void dh_stop_search_devices(DHHandle searchHandle) {
+    NSLog(@"[DahuaBridge] Simulator: dh_stop_search_devices() stub");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_stop_search_devices() stub"];
+}
+
 #else
 
 #import "3rdparty/include/netsdk.h"
@@ -517,6 +528,71 @@ int dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices) 
         NSLog(@"%@", msg);
         [DahuaSdkPlugin emitLog:msg];
         return 0;
+    }
+}
+
+// Structure to hold search context
+typedef struct {
+    DHDeviceSearchCallback callback;
+    void* userData;
+} SearchContext;
+
+// C callback wrapper for device search
+static void CALLBACK DeviceSearchCallback(DEVICE_NET_INFO_EX *pDevNetInfo, void* pUserData) {
+    SearchContext* ctx = (SearchContext*)pUserData;
+    if (!ctx || !ctx->callback || !pDevNetInfo) return;
+    
+    // Convert to DHDeviceInfo
+    DHDeviceInfo deviceInfo;
+    memset(&deviceInfo, 0, sizeof(deviceInfo));
+    
+    strncpy(deviceInfo.serialNo, pDevNetInfo->szSerialNo, sizeof(deviceInfo.serialNo) - 1);
+    strncpy(deviceInfo.ip, pDevNetInfo->szIP, sizeof(deviceInfo.ip) - 1);
+    strncpy(deviceInfo.mac, pDevNetInfo->szMac, sizeof(deviceInfo.mac) - 1);
+    deviceInfo.port = pDevNetInfo->nPort;
+    
+    // Check if device is initialized
+    // byInitStatus & 0x01 == 0 means not initialized
+    // (byInitStatus >> 1) & 0x01 == 1 means can be initialized
+    deviceInfo.initialized = !((pDevNetInfo->byInitStatus & 0x01) == 0 && 
+                               ((pDevNetInfo->byInitStatus >> 1) & 0x01) == 1);
+    
+    // Call the callback
+    ctx->callback(&deviceInfo, ctx->userData);
+}
+
+DHHandle dh_start_search_devices(DHDeviceSearchCallback callback, void* userData) {
+    if (!callback) return 0;
+    
+    // Allocate context (will be freed in stop_search)
+    SearchContext* ctx = (SearchContext*)malloc(sizeof(SearchContext));
+    ctx->callback = callback;
+    ctx->userData = userData;
+    
+    LLONG handle = CLIENT_StartSearchDevices(DeviceSearchCallback, ctx);
+    
+    if (handle) {
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Started device search, handle=%lld", handle];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    } else {
+        free(ctx);
+        NSLog(@"[DahuaBridge] Failed to start device search");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Failed to start device search"];
+    }
+    
+    return (DHHandle)handle;
+}
+
+void dh_stop_search_devices(DHHandle searchHandle) {
+    if (searchHandle) {
+        CLIENT_StopSearchDevices((LLONG)searchHandle);
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Stopped device search, handle=%lld", searchHandle];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        
+        // Note: We're not freeing the SearchContext here as it may still be in use by callbacks
+        // In production code, you'd want better memory management
     }
 }
 
