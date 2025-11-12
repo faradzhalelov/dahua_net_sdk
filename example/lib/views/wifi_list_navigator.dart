@@ -38,7 +38,7 @@ class _WifiListNavigatorState extends State<WifiListNavigator> {
         pass: widget.config.password,
       );
 
-      if (handle > 0) {
+      if (handle != 0) {
         setState(() {
           _loginHandle = handle;
           _isLoading = false;
@@ -60,7 +60,7 @@ class _WifiListNavigatorState extends State<WifiListNavigator> {
 
   @override
   void dispose() {
-    if (_loginHandle != null && _loginHandle! > 0) {
+    if (_loginHandle != null && _loginHandle! != 0) {
       DahuaSdk.logout(_loginHandle!);
     }
     super.dispose();

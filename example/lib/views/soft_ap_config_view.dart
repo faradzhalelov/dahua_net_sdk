@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dahua_sdk/dahua_sdk.dart';
 import 'dart:async';
+import '../utils/validators.dart';
 
 /// View for configuring camera WiFi when connected to camera's Soft AP network
 ///
@@ -23,8 +24,8 @@ class SoftApConfigView extends StatefulWidget {
 
 class _SoftApConfigViewState extends State<SoftApConfigView> {
   final _formKey = GlobalKey<FormState>();
-  final _serialController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _serialController = TextEditingController(text: 'AJ0DBFDPAG00068');
+  final _passwordController = TextEditingController(text: 'CEREBROLAB2024');
 
   bool _isConfiguring = false;
   bool _isScanning = false;
@@ -58,8 +59,12 @@ class _SoftApConfigViewState extends State<SoftApConfigView> {
       final subscription = DahuaSdk.searchDeviceBySerial().listen(
         (device) {
           debugPrint('Found device: ${device.ip} - ${device.serialNo}');
-          if (!completer.isCompleted) {
+          // Only accept valid IP addresses
+          if (!completer.isCompleted && isValidIpAddress(device.ip)) {
+            debugPrint('Valid IP found: ${device.ip}');
             completer.complete(device.ip);
+          } else if (!isValidIpAddress(device.ip)) {
+            debugPrint('Invalid IP address ignored: ${device.ip}');
           }
         },
         onError: (error) {
@@ -144,17 +149,42 @@ class _SoftApConfigViewState extends State<SoftApConfigView> {
       });
 
       // Scan WiFi networks using camera (no login required)
-      final networks = await DahuaSdk.getDevWifiList(foundIp);
+      try {
+        final networks = await DahuaSdk.getDevWifiList(foundIp);
 
-      setState(() {
-        _isScanning = false;
-        if (networks.isEmpty) {
-          _statusMessage = 'WiFi сети не найдены';
-        } else {
-          _availableNetworks.addAll(networks);
-          _statusMessage = 'Найдено WiFi сетей: ${networks.length}';
-        }
-      });
+        setState(() {
+          _isScanning = false;
+          if (networks.isEmpty) {
+            _statusMessage =
+                'WiFi сети не найдены!\n\n'
+                '⚠️ Возможные причины:\n'
+                '1. Камера не в режиме Soft AP\n'
+                '2. Телефон не подключен к WiFi камеры (DHIPC-XXXXXX)\n'
+                '3. Неправильный IP адрес камеры\n\n'
+                '📱 Для настройки Soft AP:\n'
+                '• Подключитесь к WiFi камеры (DHIPC-...)\n'
+                '• IP обычно 192.168.1.1 или 192.168.80.1\n'
+                '• Попробуйте ввести IP вручную';
+          } else {
+            _availableNetworks.addAll(networks);
+            _statusMessage = 'Найдено WiFi сетей: ${networks.length}';
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _isScanning = false;
+          _statusMessage =
+              'Ошибка получения WiFi сетей!\n\n'
+              '⚠️ Камера найдена на IP: $foundIp\n'
+              'Но это НЕ Soft AP адрес.\n\n'
+              '📱 Для настройки через Soft AP:\n'
+              '1. Отключитесь от текущей WiFi сети\n'
+              '2. Подключитесь к WiFi камеры (DHIPC-XXXXXX)\n'
+              '3. Проверьте IP (обычно 192.168.1.1)\n'
+              '4. Попробуйте снова\n\n'
+              'Ошибка: $e';
+        });
+      }
     } catch (e) {
       setState(() {
         _isScanning = false;
@@ -206,8 +236,13 @@ class _SoftApConfigViewState extends State<SoftApConfigView> {
       setState(() => _statusMessage = 'Поиск камеры в сети...');
 
       final subscription = DahuaSdk.searchDeviceBySerial().listen((device) {
-        if (!_foundDevices.any((d) => d.serialNo == device.serialNo)) {
+        // Only add devices with valid IP addresses
+        if (isValidIpAddress(device.ip) &&
+            !_foundDevices.any((d) => d.serialNo == device.serialNo)) {
+          debugPrint('Found valid device: ${device.ip} - ${device.serialNo}');
           setState(() => _foundDevices.add(device));
+        } else if (!isValidIpAddress(device.ip)) {
+          debugPrint('Ignoring device with invalid IP: ${device.ip}');
         }
       });
 
@@ -307,6 +342,35 @@ class _SoftApConfigViewState extends State<SoftApConfigView> {
                         '6. Нажмите "Начать конфигурацию"',
                         style: TextStyle(fontSize: 12),
                       ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.amber.shade700),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber,
+                              color: Colors.amber.shade900,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Эта функция работает только когда камера в режиме Soft AP (создает свою WiFi точку). '
+                                'Если камера уже подключена к WiFi, используйте другие методы настройки.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -376,19 +440,76 @@ class _SoftApConfigViewState extends State<SoftApConfigView> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: TextFormField(
-                      controller: _cameraIpController,
-                      decoration: const InputDecoration(
-                        labelText: 'IP адрес камеры',
-                        hintText: '192.168.1.1',
-                        prefixIcon: Icon(Icons.router),
-                        border: OutlineInputBorder(),
-                        helperText: 'Обычно определяется автоматически',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      enabled: !_isConfiguring && !_isScanning,
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _cameraIpController,
+                          decoration: const InputDecoration(
+                            labelText: 'IP адрес камеры',
+                            hintText: '192.168.1.1',
+                            prefixIcon: Icon(Icons.router),
+                            border: OutlineInputBorder(),
+                            helperText:
+                                'Обычно 192.168.1.1 или 192.168.80.1 в режиме Soft AP',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          enabled: !_isConfiguring && !_isScanning,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: (_isConfiguring || _isScanning)
+                              ? null
+                              : () async {
+                                  final ip = _cameraIpController.text.trim();
+                                  if (!isValidIpAddress(ip)) {
+                                    setState(() {
+                                      _statusMessage =
+                                          'Некорректный IP адрес: $ip';
+                                    });
+                                    return;
+                                  }
+
+                                  setState(() {
+                                    _isScanning = true;
+                                    _availableNetworks.clear();
+                                    _selectedSsid = null;
+                                    _statusMessage =
+                                        'Сканирование WiFi сетей на $ip...';
+                                  });
+
+                                  try {
+                                    final networks =
+                                        await DahuaSdk.getDevWifiList(ip);
+
+                                    setState(() {
+                                      _isScanning = false;
+                                      if (networks.isEmpty) {
+                                        _statusMessage =
+                                            'WiFi сети не найдены на $ip\n\n'
+                                            'Убедитесь что:\n'
+                                            '• Телефон подключен к WiFi камеры\n'
+                                            '• Камера в режиме Soft AP\n'
+                                            '• IP адрес правильный';
+                                      } else {
+                                        _availableNetworks.addAll(networks);
+                                        _statusMessage =
+                                            'Найдено WiFi сетей: ${networks.length}';
+                                      }
+                                    });
+                                  } catch (e) {
+                                    setState(() {
+                                      _isScanning = false;
+                                      _statusMessage =
+                                          'Ошибка сканирования: $e';
+                                    });
+                                  }
+                                },
+                          icon: const Icon(Icons.search),
+                          label: const Text('Сканировать с этого IP'),
+                        ),
+                      ],
                     ),
                   ),
                 ],

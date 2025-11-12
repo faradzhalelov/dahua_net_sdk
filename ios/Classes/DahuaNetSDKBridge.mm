@@ -714,4 +714,171 @@ int dh_config_device_wifi(const char* serialNumber, const char* ssid, const char
     return result;
 }
 
+bool dh_init_device_account(NSDictionary* deviceInfo, const char* username, const char* password, 
+                            const char* phoneOrEmail, bool useIP) {
+    if (!deviceInfo || !username || !password) {
+        NSLog(@"[DahuaBridge] Invalid parameters for dh_init_device_account");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Invalid parameters for dh_init_device_account"];
+        return false;
+    }
+    
+    NET_IN_INIT_DEVICE_ACCOUNT stIn = {0};
+    stIn.dwSize = sizeof(stIn);
+    
+    // MAC address from device info
+    NSString* mac = deviceInfo[@"mac"];
+    if (mac) {
+        strncpy(stIn.szMac, [mac UTF8String], sizeof(stIn.szMac) - 1);
+    }
+    
+    // Username
+    strncpy(stIn.szUserName, username, sizeof(stIn.szUserName) - 1);
+    
+    // Password (must be 8+ chars with letters and numbers)
+    strncpy(stIn.szPwd, password, sizeof(stIn.szPwd) - 1);
+    
+    // Password reset way from device info
+    NSNumber* pwdResetWay = deviceInfo[@"pwdResetWay"];
+    if (pwdResetWay) {
+        stIn.byPwdResetWay = [pwdResetWay unsignedCharValue];
+        
+        // Check if phone (bit 1 = 0) or email (bit 1 = 1)
+        if (phoneOrEmail && strlen(phoneOrEmail) > 0) {
+            if (([pwdResetWay unsignedCharValue] >> 1 & 0x01) == 0) {  // Phone
+                strncpy(stIn.szCellPhone, phoneOrEmail, sizeof(stIn.szCellPhone) - 1);
+            } else {  // Email
+                strncpy(stIn.szMail, phoneOrEmail, sizeof(stIn.szMail) - 1);
+            }
+        }
+    }
+    
+    NET_OUT_INIT_DEVICE_ACCOUNT stOut = {0};
+    stOut.dwSize = sizeof(stOut);
+    
+    BOOL result;
+    if (useIP) {
+        // Unicast initialization (by IP)
+        NSString* ip = deviceInfo[@"ip"];
+        if (!ip || ip.length == 0) {
+            NSLog(@"[DahuaBridge] Missing IP address for device initialization");
+            [DahuaSdkPlugin emitLog:@"[DahuaBridge] Missing IP address for device initialization"];
+            return false;
+        }
+        
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Initializing device account by IP: %@", ip];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        
+        result = CLIENT_InitDevAccountByIP(&stIn, &stOut, 5000, NULL, [ip UTF8String]);
+    } else {
+        // Multicast initialization
+        NSLog(@"[DahuaBridge] Initializing device account (multicast)");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Initializing device account (multicast)"];
+        
+        result = CLIENT_InitDevAccount(&stIn, &stOut, 5000, NULL);
+    }
+    
+    if (result) {
+        NSLog(@"[DahuaBridge] Device account initialized successfully");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Device account initialized successfully"];
+        return true;
+    } else {
+        int error = CLIENT_GetLastError();
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Failed to initialize device account, error: %x", error];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        return false;
+    }
+}
+
+/**
+ * Modify device user password (for already initialized devices)
+ * Requires login first
+ * 
+ * @param loginHandle Login handle from dh_login
+ * @param username Username to modify (e.g., "admin")
+ * @param oldPassword Current password
+ * @param newPassword New password (must be 8+ chars with letters and numbers)
+ * @return true if successful, false otherwise
+ */
+bool dh_modify_device_password(DHHandle loginHandle, const char* username, 
+                                const char* oldPassword, const char* newPassword) {
+    if (loginHandle == 0 || !username || !oldPassword || !newPassword) {
+        NSLog(@"[DahuaBridge] Invalid parameters for dh_modify_device_password");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Invalid parameters for dh_modify_device_password"];
+        return false;
+    }
+
+    NSLog(@"[DahuaBridge] Modifying device password for user: %s", username);
+    [DahuaSdkPlugin emitLog:[NSString stringWithFormat:@"[DahuaBridge] Modifying device password for user: %s", username]];
+
+    // Step 1: Query user info to get current user data
+    USER_MANAGE_INFO_NEW userManageInfo;
+    memset(&userManageInfo, 0, sizeof(USER_MANAGE_INFO_NEW));
+    userManageInfo.dwSize = sizeof(USER_MANAGE_INFO_NEW);
+
+    BOOL queryResult = CLIENT_QueryUserInfoNew(loginHandle, &userManageInfo, NULL, 5000);
+    if (!queryResult) {
+        int error = CLIENT_GetLastError();
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] CLIENT_QueryUserInfoNew failed, error: %x", error];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        return false;
+    }
+
+    NSLog(@"[DahuaBridge] QueryUserInfoNew success, found %d users", userManageInfo.dwUserNum);
+    [DahuaSdkPlugin emitLog:[NSString stringWithFormat:@"[DahuaBridge] QueryUserInfoNew success, found %d users", userManageInfo.dwUserNum]];
+
+    // Step 2: Find the target user
+    USER_INFO_NEW* targetUser = NULL;
+    for (DWORD i = 0; i < userManageInfo.dwUserNum; i++) {
+        const char* queryUserName = userManageInfo.userList[i].name;
+        if (strcmp(queryUserName, username) == 0) {
+            targetUser = &userManageInfo.userList[i];
+            NSLog(@"[DahuaBridge] Found target user: %s", username);
+            [DahuaSdkPlugin emitLog:[NSString stringWithFormat:@"[DahuaBridge] Found target user: %s", username]];
+            break;
+        }
+    }
+
+    if (targetUser == NULL) {
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] User not found: %s", username];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        return false;
+    }
+
+    // Step 3: Create old and new user info structures
+    USER_INFO_NEW oldInfo;
+    USER_INFO_NEW newInfo;
+    
+    // Deep copy the user info
+    memcpy(&oldInfo, targetUser, sizeof(USER_INFO_NEW));
+    memcpy(&newInfo, targetUser, sizeof(USER_INFO_NEW));
+
+    // Set old password
+    memset(oldInfo.passWord, 0, sizeof(oldInfo.passWord));
+    strncpy(oldInfo.passWord, oldPassword, sizeof(oldInfo.passWord) - 1);
+
+    // Set new password
+    memset(newInfo.passWord, 0, sizeof(newInfo.passWord));
+    strncpy(newInfo.passWord, newPassword, sizeof(newInfo.passWord) - 1);
+
+    // Step 4: Call CLIENT_OperateUserInfoNew with operation type 6 (modify password)
+    // Operation type 6 = EM_OPERATE_USERINFO_TYPE_MODIFY_PWD
+    BOOL result = CLIENT_OperateUserInfoNew(loginHandle, 6, &newInfo, &oldInfo, NULL, 5000);
+
+    if (result) {
+        NSLog(@"[DahuaBridge] Password modified successfully for user: %s", username);
+        [DahuaSdkPlugin emitLog:[NSString stringWithFormat:@"[DahuaBridge] Password modified successfully for user: %s", username]];
+        return true;
+    } else {
+        int error = CLIENT_GetLastError();
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] CLIENT_OperateUserInfoNew failed, error: %x", error];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        return false;
+    }
+}
+
 #endif

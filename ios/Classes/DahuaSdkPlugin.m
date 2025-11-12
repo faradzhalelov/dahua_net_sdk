@@ -209,6 +209,43 @@ static DHHandle s_currentSearchHandle = 0;
     int timeoutSeconds = timeout ? [timeout intValue] : 60;
     int ret = dh_config_device_wifi([serialNumber UTF8String], [ssid UTF8String], password ? [password UTF8String] : "", timeoutSeconds);
     result(@(ret == 0));
+  } else if ([@"initDeviceAccount" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSDictionary* deviceInfo = args[@"deviceInfo"];
+    NSString* username = args[@"username"];
+    NSString* password = args[@"password"];
+    NSString* phoneOrEmail = args[@"phoneOrEmail"];
+    NSNumber* useIPNum = args[@"useIP"];
+    
+    if (!deviceInfo || !username || !password) {
+      result([FlutterError errorWithCode:@"INVALID_ARGUMENT"
+                                 message:@"Device info, username and password are required"
+                                 details:nil]);
+      return;
+    }
+    
+    bool useIP = useIPNum ? [useIPNum boolValue] : true;
+    bool success = dh_init_device_account(deviceInfo, [username UTF8String], [password UTF8String], 
+                                          phoneOrEmail ? [phoneOrEmail UTF8String] : NULL, useIP);
+    result(@(success));
+  } else if ([@"modifyDevicePassword" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSNumber* loginHandleNum = args[@"loginHandle"];
+    NSString* username = args[@"username"];
+    NSString* oldPassword = args[@"oldPassword"];
+    NSString* newPassword = args[@"newPassword"];
+    
+    if (!loginHandleNum || !username || !oldPassword || !newPassword) {
+      result([FlutterError errorWithCode:@"INVALID_ARGUMENT"
+                                 message:@"loginHandle, username, oldPassword and newPassword are required"
+                                 details:nil]);
+      return;
+    }
+    
+    DHHandle loginHandle = (DHHandle)[loginHandleNum longLongValue];
+    bool success = dh_modify_device_password(loginHandle, [username UTF8String], 
+                                             [oldPassword UTF8String], [newPassword UTF8String]);
+    result(@(success));
   } else if ([@"getPlatformVersion" isEqualToString:call.method]) {
     result([@"iOS " stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else {

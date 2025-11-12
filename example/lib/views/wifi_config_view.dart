@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dahua_sdk/dahua_sdk.dart';
 
 class WifiConfigView extends StatefulWidget {
@@ -16,41 +17,62 @@ class WifiConfigView extends StatefulWidget {
 }
 
 class _WifiConfigViewState extends State<WifiConfigView> {
+  static const _maxPasswordLength = 63;
   final _formKey = GlobalKey<FormState>();
-  final _ssidController = TextEditingController();
-  final _passwordController = TextEditingController();
+  late TextEditingController _ssidController;
+  late TextEditingController _passwordController;
 
   WlanAuthMode _authMode = WlanAuthMode.wpa2Psk;
   WlanEncryptionAlg _encryptionAlg = WlanEncryptionAlg.aes;
   bool _enabled = true;
   bool _connectEnabled = true;
   bool _isLoading = false;
+  bool _isScanning = false;
   String? _statusMessage;
+  List<WlanDevice> _availableNetworks = [];
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize controllers fresh
+    _ssidController = TextEditingController();
+    _passwordController = TextEditingController();
+
     if (widget.prefilledDevice != null) {
       _prefillFromDevice(widget.prefilledDevice!);
-    } else {
-      _loadCurrentConfig();
     }
   }
 
   void _prefillFromDevice(WlanDevice device) {
+    // Only prefill SSID. Do NOT auto-fill passwords from device responses.
+    _ssidController.text = device.ssid;
+
     setState(() {
-      _ssidController.text = device.ssid;
-      _authMode = WlanAuthMode.values.firstWhere(
-        (e) => e.value == device.authMode,
-        orElse: () => WlanAuthMode.wpa2Psk,
-      );
-      _encryptionAlg = WlanEncryptionAlg.values.firstWhere(
-        (e) => e.value == device.encryptionAlg,
-        orElse: () => WlanEncryptionAlg.aes,
-      );
       _statusMessage = 'Configure WiFi: ${device.ssid}';
     });
+
+    // Always clear password field (do not set any device-provided password)
+    _safeSetPassword('');
   }
+
+  // Safe method to set password that prevents text input crashes
+  void _safeSetPassword(String password) {
+    // Never programmatically set a non-empty password to avoid corrupt input
+    // coming from native code. We only allow clearing the password field here.
+    if (password.isNotEmpty) {
+      debugPrint('Ignoring device-provided password; require manual entry');
+    }
+
+    // Clear the controller to reset any internal state safely.
+    if (mounted) {
+      _passwordController.clear();
+    }
+  }
+
+  // Password sanitization helper removed: we no longer auto-fill device
+  // passwords to avoid platform input crashes. Passwords must be entered
+  // manually by the user.
 
   @override
   void dispose() {
@@ -70,7 +92,6 @@ class _WifiConfigViewState extends State<WifiConfigView> {
       if (config != null && mounted) {
         setState(() {
           _ssidController.text = config.ssid;
-          _passwordController.text = config.password;
           _authMode = WlanAuthMode.values.firstWhere(
             (e) => e.value == config.authMode,
             orElse: () => WlanAuthMode.wpa2Psk,
@@ -81,9 +102,17 @@ class _WifiConfigViewState extends State<WifiConfigView> {
           );
           _enabled = config.enabled;
           _connectEnabled = config.connectEnabled;
-          _statusMessage = 'Configuration loaded successfully';
           _isLoading = false;
         });
+
+        // Do NOT auto-fill password from device. Only populate SSID and flags.
+        _safeSetPassword('');
+
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Configuration loaded (enter password manually)';
+          });
+        }
       } else if (mounted) {
         setState(() {
           _statusMessage = 'Failed to load configuration';
@@ -98,6 +127,62 @@ class _WifiConfigViewState extends State<WifiConfigView> {
         });
       }
     }
+  }
+
+  Future<void> _scanWifiNetworks() async {
+    setState(() {
+      _isScanning = true;
+      _statusMessage = 'Сканирование WiFi сетей...';
+      _availableNetworks.clear();
+    });
+
+    try {
+      final devices = await DahuaSdk.scanWlanDevices(widget.loginHandle);
+
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _availableNetworks = devices;
+          if (devices.isEmpty) {
+            _statusMessage = 'WiFi сети не найдены';
+          } else {
+            _statusMessage =
+                'Найдено ${devices.length} WiFi сетей. Выберите из списка ниже.';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+          _statusMessage = 'Ошибка сканирования: $e';
+        });
+      }
+    }
+  }
+
+  void _selectNetwork(WlanDevice device) {
+    // CRITICAL FIX: Recreate controllers completely to break any corrupted state
+    // This is the most aggressive fix to prevent text input sync issues
+
+    // Store old controllers for disposal
+    final oldSsidController = _ssidController;
+    final oldPasswordController = _passwordController;
+
+    // Create brand new controllers
+    _ssidController = TextEditingController(text: device.ssid);
+    _passwordController = TextEditingController();
+
+    // Update UI
+    setState(() {
+      _statusMessage = 'Выбрана сеть: ${device.ssid}. Введите пароль.';
+    });
+
+    // Dispose old controllers after a frame
+    Future.delayed(const Duration(milliseconds: 1), () {
+      oldSsidController.dispose();
+      oldPasswordController.dispose();
+    });
   }
 
   Future<void> _saveConfig() async {
@@ -149,7 +234,6 @@ class _WifiConfigViewState extends State<WifiConfigView> {
   }
 
   int _calculateEncryption() {
-    // Simplified encryption calculation based on common combinations
     final authValue = _authMode.value;
     final encrValue = _encryptionAlg.value;
 
@@ -161,6 +245,14 @@ class _WifiConfigViewState extends State<WifiConfigView> {
     if (authValue == 0 && encrValue == 0) return 1; // OPEN-NONE
 
     return 11; // Default to WPA2-PSK-AES
+  }
+
+  Color _getSignalColor(int signalLevel) {
+    if (signalLevel >= 80) return Colors.green;
+    if (signalLevel >= 60) return Colors.lightGreen;
+    if (signalLevel >= 40) return Colors.orange;
+    if (signalLevel >= 20) return Colors.deepOrange;
+    return Colors.red;
   }
 
   String _getEncryptionDescription() {
@@ -220,6 +312,45 @@ class _WifiConfigViewState extends State<WifiConfigView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Инструкция
+                    Card(
+                      color: Colors.blue.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Colors.blue.shade700,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Изменение WiFi сети камеры',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '1. Нажмите "Сканировать доступные WiFi сети" для поиска\n'
+                              '2. Выберите нужную сеть из списка (или введите SSID вручную)\n'
+                              '3. Введите пароль от новой WiFi сети\n'
+                              '4. Нажмите "Save Configuration"\n'
+                              '5. Камера перезагрузится и подключится к новой сети\n'
+                              '6. Найдите камеру через "Device Search" и обновите IP',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     if (_statusMessage != null)
                       Card(
                         color: _statusMessage!.contains('success')
@@ -231,6 +362,92 @@ class _WifiConfigViewState extends State<WifiConfigView> {
                         ),
                       ),
                     const SizedBox(height: 16),
+
+                    // Кнопка сканирования WiFi
+                    ElevatedButton.icon(
+                      onPressed: (_isLoading || _isScanning)
+                          ? null
+                          : _scanWifiNetworks,
+                      icon: _isScanning
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.wifi_find),
+                      label: Text(
+                        _isScanning
+                            ? 'Сканирование...'
+                            : 'Сканировать доступные WiFi сети',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.all(12),
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Список найденных сетей
+                    if (_availableNetworks.isNotEmpty) ...[
+                      Card(
+                        color: Colors.green.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Найдено сетей: ${_availableNetworks.length}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade900,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Нажмите на сеть, чтобы выбрать её',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...List.generate(_availableNetworks.length, (index) {
+                        final device = _availableNetworks[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.signal_wifi_4_bar,
+                              color: _getSignalColor(device.signalLevel),
+                            ),
+                            title: Text(
+                              device.ssid,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Уровень сигнала: ${device.signalLevel}% • ${device.authMode == 0 ? 'Открытая' : 'Защищенная'}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: Icon(
+                              device.authMode == 0
+                                  ? Icons.lock_open
+                                  : Icons.lock,
+                              color: device.authMode == 0
+                                  ? Colors.orange
+                                  : Colors.green,
+                            ),
+                            onTap: () => _selectNetwork(device),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                    ],
+
                     TextFormField(
                       controller: _ssidController,
                       decoration: const InputDecoration(
@@ -238,6 +455,7 @@ class _WifiConfigViewState extends State<WifiConfigView> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.wifi),
                       ),
+                      enableIMEPersonalizedLearning: false,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter SSID';
@@ -246,6 +464,8 @@ class _WifiConfigViewState extends State<WifiConfigView> {
                       },
                     ),
                     const SizedBox(height: 16),
+
+                    // Password field with additional safety measures
                     TextFormField(
                       controller: _passwordController,
                       decoration: const InputDecoration(
@@ -254,13 +474,36 @@ class _WifiConfigViewState extends State<WifiConfigView> {
                         prefixIcon: Icon(Icons.lock),
                       ),
                       obscureText: true,
+                      maxLength: _maxPasswordLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      // Remove counter to avoid potential issues
+                      buildCounter:
+                          (
+                            context, {
+                            required currentLength,
+                            required isFocused,
+                            maxLength,
+                          }) => null,
+                      inputFormatters: [
+                        // Only allow printable ASCII characters
+                        FilteringTextInputFormatter.allow(RegExp(r'[ -~]')),
+                        LengthLimitingTextInputFormatter(_maxPasswordLength),
+                      ],
+                      // Disable autofill and IME learning to prevent crashes
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      enableIMEPersonalizedLearning: false,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.trim().isEmpty) {
                           return 'Please enter password';
+                        }
+                        if (value.length > _maxPasswordLength) {
+                          return 'Password must be at most $_maxPasswordLength characters';
                         }
                         return null;
                       },
                     ),
+
                     const SizedBox(height: 24),
                     const Text(
                       'Security Settings',

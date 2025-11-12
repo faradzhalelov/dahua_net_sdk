@@ -93,6 +93,27 @@ int      dh_stop_smart_config(void);
 // Returns 0 on success, non-zero on failure
 int      dh_config_device_wifi(const char* serialNumber, const char* ssid, const char* password, int timeoutSeconds);
 
+/// Device Account Initialization (first time setup / password reset)
+// Initialize device account (set first username/password and recovery info)
+// deviceInfo: Dictionary with device info (mac, ip, pwdResetWay from device search)
+// username: Username to set (e.g. "admin")
+// password: Password to set (must be 8+ chars with letters and numbers)
+// phoneOrEmail: Phone number or email for password recovery (optional, can be NULL)
+// useIP: true for unicast (IP-based), false for multicast initialization
+// Returns true on success
+bool     dh_init_device_account(NSDictionary* deviceInfo, const char* username, const char* password, 
+                                 const char* phoneOrEmail, bool useIP);
+
+/// Device Password Modification (for already initialized devices)
+// Modify device user password (requires login first)
+// loginHandle: Login handle from dh_login
+// username: Username to modify (e.g. "admin")
+// oldPassword: Current password
+// newPassword: New password (must be 8+ chars with letters and numbers)
+// Returns true on success, false on failure
+bool     dh_modify_device_password(DHHandle loginHandle, const char* username, 
+                                    const char* oldPassword, const char* newPassword);
+
 #ifdef __cplusplus
 }
 #endif

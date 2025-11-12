@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:dahua_sdk/dahua_sdk.dart';
+import '../utils/validators.dart';
 
 class DeviceSearchView extends StatefulWidget {
   const DeviceSearchView({super.key});
@@ -35,6 +36,12 @@ class _DeviceSearchViewState extends State<DeviceSearchView> {
     try {
       _searchSubscription = DahuaSdk.searchDeviceBySerial().listen(
         (device) {
+          // Only process devices with valid IP addresses
+          if (!isValidIpAddress(device.ip)) {
+            debugPrint('Ignoring device with invalid IP: ${device.ip}');
+            return;
+          }
+
           setState(() {
             // Filter by serial number if specified
             if (_serialController.text.isNotEmpty) {

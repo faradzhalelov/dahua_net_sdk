@@ -9,6 +9,7 @@ import 'wifi_config_navigator.dart';
 import 'wifi_list_navigator.dart';
 import 'device_search_view.dart';
 import 'soft_ap_config_view.dart';
+import 'init_device_view.dart';
 
 class HomeView extends StatefulWidget {
   final CameraViewModel viewModel;
@@ -113,7 +114,7 @@ class _HomeViewState extends State<HomeView> {
           controller: _ipController,
           label: 'IP Address',
           icon: Icons.router,
-          keyboardType: TextInputType.number,
+          //keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 12),
         _buildTextField(
@@ -175,6 +176,19 @@ class _HomeViewState extends State<HomeView> {
             );
           },
         ),
+        const SizedBox(height: 8),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            '⚠️ Только для камер в режиме Soft AP (DHIPC-xxx WiFi). Для уже настроенных камер используйте "WiFi Configuration" ниже',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.orange,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
         const SizedBox(height: 12),
         _buildButton(
           label: 'Device Search (Поиск устройств в сети)',
@@ -185,6 +199,19 @@ class _HomeViewState extends State<HomeView> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const DeviceSearchView()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildButton(
+          label: 'Init Device (Инициализация нового устройства)',
+          icon: Icons.settings_suggest,
+          color: Colors.amber,
+          enabled: true, // Always enabled, doesn't require connection
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const InitDeviceView()),
             );
           },
         ),
@@ -257,6 +284,19 @@ class _HomeViewState extends State<HomeView> {
               ),
             );
           },
+        ),
+        const SizedBox(height: 8),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            '💡 Используйте "WiFi Configuration" для изменения WiFi сети на уже подключенной камере',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );

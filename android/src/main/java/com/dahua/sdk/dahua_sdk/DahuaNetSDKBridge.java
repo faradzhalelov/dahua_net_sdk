@@ -266,15 +266,21 @@ public class DahuaNetSDKBridge {
         if (bytes == null) return "";
         
         try {
-            // Find the null terminator
-            int length = 0;
+            int firstNull = -1;
             for (int i = 0; i < bytes.length; i++) {
-                if (bytes[i] == 0) break;
-                length++;
+                if (bytes[i] == 0) {
+                    firstNull = i;
+                    break;
+                }
             }
-            return new String(bytes, 0, length, "UTF-8");
+            
+            if (firstNull != -1) {
+                return new String(bytes, 0, firstNull, "UTF-8");
+            } else {
+                return new String(bytes, "UTF-8");
+            }
         } catch (Exception e) {
-            Log.e(TAG, "byteArrayToString error: " + e.getMessage());
+            Log.e(TAG, "byteArrayToString failed: " + e.getMessage(), e);
             return "";
         }
     }
@@ -659,6 +665,210 @@ public class DahuaNetSDKBridge {
             DahuaSdkPlugin.emitLog("configDeviceWifi exception: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Initialize device account (first time setup)
+     * Sets username, password, and recovery info (phone or email)
+     * Device must be in uninitialized state (check via device search)
+     * 
+     * @param deviceInfo Device info from search (contains MAC, IP, pwdResetWay)
+     * @param username Username to set (e.g. "admin")
+     * @param password Password to set (must be 8+ chars with letters and numbers)
+     * @param phoneOrEmail Phone number or email for password recovery
+     * @param useIP Use unicast (true) or multicast (false) initialization
+     * @return true on success
+     */
+    public boolean initDeviceAccount(Map<String, Object> deviceInfo, String username, 
+                                     String password, String phoneOrEmail, boolean useIP) {
+        if (deviceInfo == null || username == null || password == null) {
+            Log.e(TAG, "initDeviceAccount: Invalid parameters");
+            DahuaSdkPlugin.emitLog("initDeviceAccount: Invalid parameters");
+            return false;
+        }
+
+        try {
+            NET_IN_INIT_DEVICE_ACCOUNT inInit = new NET_IN_INIT_DEVICE_ACCOUNT();
+            
+            // MAC address from device info
+            String mac = (String) deviceInfo.get("mac");
+            if (mac != null) {
+                System.arraycopy(mac.getBytes(), 0, inInit.szMac, 0, 
+                    Math.min(mac.getBytes().length, inInit.szMac.length));
+            }
+            
+            // Username
+            System.arraycopy(username.getBytes(), 0, inInit.szUserName, 0, 
+                Math.min(username.getBytes().length, inInit.szUserName.length));
+            
+            // Password (must be 8+ chars with letters and numbers)
+            System.arraycopy(password.getBytes(), 0, inInit.szPwd, 0, 
+                Math.min(password.getBytes().length, inInit.szPwd.length));
+            
+            // Password reset way from device info
+            Integer pwdResetWay = (Integer) deviceInfo.get("pwdResetWay");
+            if (pwdResetWay != null) {
+                inInit.byPwdResetWay = pwdResetWay.byteValue();
+                
+                // Check if phone (bit 1 = 0) or email (bit 1 = 1)
+                if (phoneOrEmail != null && !phoneOrEmail.isEmpty()) {
+                    if ((pwdResetWay >> 1 & 0x01) == 0) {  // Phone
+                        System.arraycopy(phoneOrEmail.getBytes(), 0, inInit.szCellPhone, 0,
+                            Math.min(phoneOrEmail.getBytes().length, inInit.szCellPhone.length));
+                    } else {  // Email
+                        System.arraycopy(phoneOrEmail.getBytes(), 0, inInit.szMail, 0,
+                            Math.min(phoneOrEmail.getBytes().length, inInit.szMail.length));
+                    }
+                }
+            }
+            
+            NET_OUT_INIT_DEVICE_ACCOUNT outInit = new NET_OUT_INIT_DEVICE_ACCOUNT();
+            
+            boolean result;
+            if (useIP) {
+                // Unicast initialization (by IP)
+                String ip = (String) deviceInfo.get("ip");
+                if (ip == null || ip.isEmpty()) {
+                    Log.e(TAG, "initDeviceAccount: Missing IP address");
+                    return false;
+                }
+                DahuaSdkPlugin.emitLog("Initializing device account by IP: " + ip);
+                result = INetSDK.InitDevAccountByIP(inInit, outInit, 5000, null, ip);
+            } else {
+                // Multicast initialization
+                DahuaSdkPlugin.emitLog("Initializing device account (multicast)");
+                result = INetSDK.InitDevAccount(inInit, outInit, 5000, null);
+            }
+            
+            if (result) {
+                DahuaSdkPlugin.emitLog("Device account initialized successfully");
+                return true;
+            } else {
+                int error = INetSDK.GetLastError();
+                Log.e(TAG, "InitDevAccount failed: " + error);
+                DahuaSdkPlugin.emitLog("InitDevAccount failed, error: " + error);
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "initDeviceAccount exception: " + e.getMessage(), e);
+            DahuaSdkPlugin.emitLog("initDeviceAccount exception: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Modify device user password (for already initialized devices)
+     * Requires login first
+     * 
+     * @param loginHandle Login handle from login()
+     * @param username Username to modify (e.g., "admin")
+     * @param oldPassword Current password
+     * @param newPassword New password (must be 8+ chars with letters and numbers)
+     * @return true if successful, false otherwise
+     */
+    public boolean modifyDevicePassword(long loginHandle, String username, String oldPassword, String newPassword) {
+        if (loginHandle == 0L) {
+            Log.e(TAG, "modifyDevicePassword: invalid login handle");
+            DahuaSdkPlugin.emitLog("modifyDevicePassword failed: invalid login handle");
+            return false;
+        }
+
+        try {
+            DahuaSdkPlugin.emitLog("Modifying device password for user: " + username);
+
+            // Step 1: Query user info to get current user data
+            USER_MANAGE_INFO_NEW userManageInfo = new USER_MANAGE_INFO_NEW();
+            boolean queryResult = INetSDK.QueryUserInfoNew(loginHandle, userManageInfo, 5000);
+            
+            if (!queryResult) {
+                int error = INetSDK.GetLastError();
+                Log.e(TAG, "QueryUserInfoNew failed: " + error);
+                DahuaSdkPlugin.emitLog("QueryUserInfoNew failed, error: " + error);
+                return false;
+            }
+
+            DahuaSdkPlugin.emitLog("QueryUserInfoNew success, found " + userManageInfo.dwUserNum + " users");
+
+            // Step 2: Find the target user
+            USER_INFO_NEW targetUser = null;
+            for (int i = 0; i < userManageInfo.dwUserNum; i++) {
+                String queryUserName = new String(userManageInfo.userList[i].name).trim();
+                if (queryUserName.equals(username.trim())) {
+                    targetUser = userManageInfo.userList[i];
+                    DahuaSdkPlugin.emitLog("Found target user: " + username);
+                    break;
+                }
+            }
+
+            if (targetUser == null) {
+                Log.e(TAG, "User not found: " + username);
+                DahuaSdkPlugin.emitLog("User not found: " + username);
+                return false;
+            }
+
+            // Step 3: Create old and new user info structures
+            // Deep copy the user info for old and new
+            USER_INFO_NEW oldInfo = deepCopyUserInfo(targetUser);
+            USER_INFO_NEW newInfo = deepCopyUserInfo(targetUser);
+
+            // Set old password
+            char[] oldPwd = oldPassword.toCharArray();
+            System.arraycopy(oldPwd, 0, oldInfo.passWord, 0,
+                Math.min(oldPwd.length, oldInfo.passWord.length));
+
+            // Set new password
+            char[] newPwd = newPassword.toCharArray();
+            System.arraycopy(newPwd, 0, newInfo.passWord, 0,
+                Math.min(newPwd.length, newInfo.passWord.length));
+
+            // Step 4: Call OperateUserInfoNew with operation type 6 (modify password)
+            boolean result = INetSDK.OperateUserInfoNew(loginHandle, 6, newInfo, oldInfo, 5000);
+
+            if (result) {
+                DahuaSdkPlugin.emitLog("Password modified successfully for user: " + username);
+                return true;
+            } else {
+                int error = INetSDK.GetLastError();
+                Log.e(TAG, "OperateUserInfoNew failed: " + error);
+                DahuaSdkPlugin.emitLog("OperateUserInfoNew failed, error: " + error);
+                return false;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "modifyDevicePassword exception: " + e.getMessage(), e);
+            DahuaSdkPlugin.emitLog("modifyDevicePassword exception: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Deep copy USER_INFO_NEW object
+     */
+    private USER_INFO_NEW deepCopyUserInfo(USER_INFO_NEW source) {
+        USER_INFO_NEW copy = new USER_INFO_NEW();
+        
+        copy.dwID = source.dwID;
+        copy.dwGroupID = source.dwGroupID;
+        copy.dwRightNum = source.dwRightNum;
+        copy.dwFouctionMask = source.dwFouctionMask;
+        copy.byIsAnonymous = source.byIsAnonymous;
+        
+        System.arraycopy(source.name, 0, copy.name, 0, source.name.length);
+        System.arraycopy(source.passWord, 0, copy.passWord, 0, source.passWord.length);
+        System.arraycopy(source.rights, 0, copy.rights, 0, source.rights.length);
+        System.arraycopy(source.memo, 0, copy.memo, 0, source.memo.length);
+        
+        // Copy NET_TIME structure
+        if (source.stuTime != null) {
+            copy.stuTime = new NET_TIME();
+            copy.stuTime.dwYear = source.stuTime.dwYear;
+            copy.stuTime.dwMonth = source.stuTime.dwMonth;
+            copy.stuTime.dwDay = source.stuTime.dwDay;
+            copy.stuTime.dwHour = source.stuTime.dwHour;
+            copy.stuTime.dwMinute = source.stuTime.dwMinute;
+            copy.stuTime.dwSecond = source.stuTime.dwSecond;
+        }
+        
+        return copy;
     }
 }
 

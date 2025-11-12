@@ -123,6 +123,12 @@ public class DahuaSdkPlugin implements FlutterPlugin, MethodCallHandler, EventCh
             case "configDeviceWifi":
                 handleConfigDeviceWifi(call, result);
                 break;
+            case "initDeviceAccount":
+                handleInitDeviceAccount(call, result);
+                break;
+            case "modifyDevicePassword":
+                handleModifyDevicePassword(call, result);
+                break;
             case "getPlatformVersion":
                 result.success("Android " + android.os.Build.VERSION.RELEASE);
                 break;
@@ -233,7 +239,8 @@ public class DahuaSdkPlugin implements FlutterPlugin, MethodCallHandler, EventCh
             if (wlanInfo != null) {
                 Map<String, Object> configMap = new HashMap<>();
                 configMap.put("ssid", byteArrayToString(wlanInfo.szSSID));
-                configMap.put("password", byteArrayToString(wlanInfo.szKeys[0]));
+                // Do NOT send password back to Flutter to avoid text input corruption
+                configMap.put("password", "");
                 configMap.put("authMode", getAuthModeFromEncryption(wlanInfo.nEncryption));
                 configMap.put("encryptionAlg", getEncryptionAlgFromEncryption(wlanInfo.nEncryption));
                 configMap.put("encryption", wlanInfo.nEncryption);
@@ -283,26 +290,48 @@ public class DahuaSdkPlugin implements FlutterPlugin, MethodCallHandler, EventCh
                 return;
             }
             
-            SDKDEV_WLAN_DEVICE_EX[] devices = netSDKBridge.scanWlanDevices(handleNum.longValue());
+            // CRITICAL FIX: Run scan on background thread to avoid text input corruption
+            // The native Dahua SDK's scanWlanDevices can interfere with Flutter's text input
+            // if called from the main thread, causing ArrayIndexOutOfBoundsException in TextInput
+            final long loginHandle = handleNum.longValue();
             
-            if (devices != null && devices.length > 0) {
-                List<Map<String, Object>> deviceList = new ArrayList<>();
-                
-                for (SDKDEV_WLAN_DEVICE_EX device : devices) {
-                    Map<String, Object> deviceMap = new HashMap<>();
-                    deviceMap.put("ssid", byteArrayToString(device.szSSID));
-                    deviceMap.put("authMode", device.byAuthMode & 0xFF);
-                    deviceMap.put("encryptionAlg", device.byEncrAlgr & 0xFF);
-                    deviceMap.put("signalLevel", device.byLinkQuality & 0xFF);
-                    deviceList.add(deviceMap);
+            new Thread(() -> {
+                try {
+                    // Add delay before scan to ensure UI thread is free
+                    Thread.sleep(100);
+                    
+                    SDKDEV_WLAN_DEVICE_EX[] devices = netSDKBridge.scanWlanDevices(loginHandle);
+                    
+                    // Return result on main thread after another delay for safety
+                    mainHandler.postDelayed(() -> {
+                        if (devices != null && devices.length > 0) {
+                            List<Map<String, Object>> deviceList = new ArrayList<>();
+                            
+                            for (SDKDEV_WLAN_DEVICE_EX device : devices) {
+                                Map<String, Object> deviceMap = new HashMap<>();
+                                deviceMap.put("ssid", byteArrayToString(device.szSSID));
+                                deviceMap.put("authMode", device.byAuthMode & 0xFF);
+                                deviceMap.put("encryptionAlg", device.byEncrAlgr & 0xFF);
+                                deviceMap.put("signalLevel", device.byLinkQuality & 0xFF);
+                                deviceList.add(deviceMap);
+                            }
+                            
+                            result.success(deviceList);
+                        } else {
+                            result.error("SCAN_FAILED", "Failed to scan WiFi devices", null);
+                        }
+                    }, 150);  // Wait 150ms before returning to ensure UI is settled
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "ScanWlanDevices failed: " + e.getMessage(), e);
+                    mainHandler.post(() -> 
+                        result.error("SCAN_ERROR", e.getMessage(), null)
+                    );
                 }
-                
-                result.success(deviceList);
-            } else {
-                result.error("SCAN_FAILED", "Failed to scan WiFi devices", null);
-            }
+            }).start();
+            
         } catch (Exception e) {
-            Log.e(TAG, "ScanWlanDevices failed: " + e.getMessage(), e);
+            Log.e(TAG, "ScanWlanDevices setup failed: " + e.getMessage(), e);
             result.error("SCAN_ERROR", e.getMessage(), null);
         }
     }
@@ -527,6 +556,60 @@ public class DahuaSdkPlugin implements FlutterPlugin, MethodCallHandler, EventCh
         }
         deviceSearchEventSink = null;
         emitLog("Device search cancelled");
+    }
+
+    private void handleInitDeviceAccount(MethodCall call, Result result) {
+        try {
+            Map<String, Object> deviceInfo = call.argument("deviceInfo");
+            String username = call.argument("username");
+            String password = call.argument("password");
+            String phoneOrEmail = call.argument("phoneOrEmail");
+            Boolean useIP = call.argument("useIP");
+
+            if (deviceInfo == null || username == null || password == null) {
+                result.error("INVALID_ARGS", "Device info, username and password are required", null);
+                return;
+            }
+
+            if (useIP == null) {
+                useIP = true; // Default to IP-based initialization
+            }
+
+            Log.d(TAG, "InitDeviceAccount: username=" + username + ", useIP=" + useIP);
+            emitLog("InitDeviceAccount: username=" + username + ", useIP=" + useIP);
+
+            boolean success = netSDKBridge.initDeviceAccount(deviceInfo, username, password, 
+                                                             phoneOrEmail != null ? phoneOrEmail : "", useIP);
+            result.success(success);
+        } catch (Exception e) {
+            Log.e(TAG, "InitDeviceAccount error: " + e.getMessage(), e);
+            emitLog("InitDeviceAccount error: " + e.getMessage());
+            result.error("INIT_ACCOUNT_ERROR", e.getMessage(), null);
+        }
+    }
+
+    private void handleModifyDevicePassword(MethodCall call, Result result) {
+        try {
+            Long loginHandle = call.argument("loginHandle");
+            String username = call.argument("username");
+            String oldPassword = call.argument("oldPassword");
+            String newPassword = call.argument("newPassword");
+
+            if (loginHandle == null || username == null || oldPassword == null || newPassword == null) {
+                result.error("INVALID_ARGS", "loginHandle, username, oldPassword and newPassword are required", null);
+                return;
+            }
+
+            Log.d(TAG, "ModifyDevicePassword: username=" + username);
+            emitLog("ModifyDevicePassword: username=" + username);
+
+            boolean success = netSDKBridge.modifyDevicePassword(loginHandle, username, oldPassword, newPassword);
+            result.success(success);
+        } catch (Exception e) {
+            Log.e(TAG, "ModifyDevicePassword error: " + e.getMessage(), e);
+            emitLog("ModifyDevicePassword error: " + e.getMessage());
+            result.error("MODIFY_PASSWORD_ERROR", e.getMessage(), null);
+        }
     }
 
     @Override

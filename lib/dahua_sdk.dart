@@ -420,6 +420,110 @@ class DahuaSdk {
       return false;
     }
   }
+
+  /// Initialize device account (first time setup)
+  /// This sets the initial username, password, and recovery information
+  /// Device must be in uninitialized state (check via searchDeviceBySerial)
+  ///
+  /// Usage:
+  /// 1. Search for device and check if initialized == false
+  /// 2. Call this method with device info from search result
+  /// 3. Device will be initialized with provided credentials
+  ///
+  /// [deviceInfo] - Device info map from searchDeviceBySerial()
+  ///                Must contain: mac, ip, pwdResetWay fields
+  /// [username] - Username to set (e.g. "admin")
+  /// [password] - Password to set (must be 8+ chars with letters and numbers)
+  /// [phoneOrEmail] - Phone number or email for password recovery (optional)
+  /// [useIP] - Use unicast (true, default) or multicast (false) initialization
+  /// Returns true if initialized successfully
+  static Future<bool> initDeviceAccount({
+    required Map<String, dynamic> deviceInfo,
+    required String username,
+    required String password,
+    String? phoneOrEmail,
+    bool useIP = true,
+  }) async {
+    try {
+      final result = await _ch.invokeMethod('initDeviceAccount', {
+        'deviceInfo': deviceInfo,
+        'username': username,
+        'password': password,
+        'phoneOrEmail': phoneOrEmail ?? '',
+        'useIP': useIP,
+      });
+      return result == true;
+    } catch (e) {
+      debugPrint('[DahuaSdk] initDeviceAccount error: $e');
+      return false;
+    }
+  }
+
+  /// Modify device user password (for already initialized devices)
+  ///
+  /// This method requires login first and can be used to change password
+  /// for already initialized devices. Use this when:
+  /// - Device is already initialized (from device search: initialized=true)
+  /// - You have current username and password
+  /// - You want to change to a new password
+  ///
+  /// Usage:
+  /// ```dart
+  /// // 1. Login to device
+  /// final loginHandle = await DahuaSdk.login(
+  ///   ip: '192.168.1.108',
+  ///   port: 37777,
+  ///   username: 'admin',
+  ///   password: 'oldPassword123',
+  /// );
+  ///
+  /// if (loginHandle == 0) {
+  ///   print('Login failed');
+  ///   return;
+  /// }
+  ///
+  /// // 2. Modify password
+  /// final success = await DahuaSdk.modifyDevicePassword(
+  ///   loginHandle: loginHandle,
+  ///   username: 'admin',
+  ///   oldPassword: 'oldPassword123',
+  ///   newPassword: 'newPassword456',
+  /// );
+  ///
+  /// if (success) {
+  ///   print('Password changed successfully');
+  /// }
+  ///
+  /// // 3. Logout
+  /// await DahuaSdk.logout(loginHandle);
+  /// ```
+  ///
+  /// Note: New password must be 8+ characters with both letters and numbers
+  ///
+  /// [loginHandle] - Login handle from login() method
+  /// [username] - Username to modify (e.g. "admin")
+  /// [oldPassword] - Current password
+  /// [newPassword] - New password (must be 8+ chars with letters and numbers)
+  /// Returns true if password modified successfully
+  static Future<bool> modifyDevicePassword({
+    required int loginHandle,
+    required String username,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final result = await _ch.invokeMethod('modifyDevicePassword', {
+        'loginHandle': loginHandle,
+        'username': username,
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+      });
+      return result == true;
+    } catch (e) {
+      debugPrint('[DahuaSdk] modifyDevicePassword error: $e');
+      return false;
+    }
+  }
 }
 
 class DahuaPreview extends StatefulWidget {
