@@ -305,6 +305,32 @@ class DahuaSdk {
     }
   }
 
+  /// Get WiFi list from device without login (by IP and port only)
+  /// [deviceIp] - device IP address
+  /// [devicePort] - device port (default: 37777)
+  /// Returns list of available WiFi networks
+  /// This method doesn't require login, just device IP and port
+  static Future<List<WlanDevice>> getDevWifiList(
+    String deviceIp, {
+    int devicePort = 37777,
+  }) async {
+    try {
+      final result = await _ch.invokeMethod('getDevWifiList', {
+        'deviceIp': deviceIp,
+        'devicePort': devicePort,
+      });
+      if (result is List) {
+        return result
+            .map((item) => WlanDevice.fromMap(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[DahuaSdk] getDevWifiList error: $e');
+      return [];
+    }
+  }
+
   /// Search for devices on the network by serial number
   /// Returns a stream of discovered devices
   /// Call stopDeviceSearch() to stop the search
@@ -321,6 +347,77 @@ class DahuaSdk {
       await _ch.invokeMethod('stopDeviceSearch');
     } catch (e) {
       debugPrint('[DahuaSdk] stopDeviceSearch error: $e');
+    }
+  }
+
+  /// Start WiFi Smart Configuration for device in Soft AP mode
+  /// This sends WiFi credentials to the device via sound/FSK modulation
+  ///
+  /// Usage:
+  /// 1. Connect phone to device's Soft AP network (usually "DHIPC-XXXXXX")
+  /// 2. Call this method with device serial number and home WiFi credentials
+  /// 3. Wait for device to connect to home WiFi
+  /// 4. Use searchDeviceBySerial() to find device on home network
+  ///
+  /// [serialNumber] - device serial number (required)
+  /// [ssid] - home WiFi SSID (required)
+  /// [password] - home WiFi password (optional)
+  /// Returns true if started successfully
+  static Future<bool> startSmartConfig({
+    required String serialNumber,
+    required String ssid,
+    String? password,
+  }) async {
+    try {
+      final result = await _ch.invokeMethod('startSmartConfig', {
+        'serialNumber': serialNumber,
+        'ssid': ssid,
+        'password': password ?? '',
+      });
+      return result == true;
+    } catch (e) {
+      debugPrint('[DahuaSdk] startSmartConfig error: $e');
+      return false;
+    }
+  }
+
+  /// Stop WiFi Smart Configuration
+  /// Returns true if stopped successfully
+  static Future<bool> stopSmartConfig() async {
+    try {
+      final result = await _ch.invokeMethod('stopSmartConfig');
+      return result == true;
+    } catch (e) {
+      debugPrint('[DahuaSdk] stopSmartConfig error: $e');
+      return false;
+    }
+  }
+
+  /// Configure device WiFi with timeout (synchronous blocking operation)
+  /// This is a convenience method that combines startSmartConfig with timeout
+  ///
+  /// [serialNumber] - device serial number (required)
+  /// [ssid] - home WiFi SSID (required)
+  /// [password] - home WiFi password (optional)
+  /// [timeoutSeconds] - timeout in seconds (default: 60)
+  /// Returns true if configured successfully within timeout
+  static Future<bool> configDeviceWifi({
+    required String serialNumber,
+    required String ssid,
+    String? password,
+    int timeoutSeconds = 60,
+  }) async {
+    try {
+      final result = await _ch.invokeMethod('configDeviceWifi', {
+        'serialNumber': serialNumber,
+        'ssid': ssid,
+        'password': password ?? '',
+        'timeout': timeoutSeconds,
+      });
+      return result == true;
+    } catch (e) {
+      debugPrint('[DahuaSdk] configDeviceWifi error: $e');
+      return false;
     }
   }
 }

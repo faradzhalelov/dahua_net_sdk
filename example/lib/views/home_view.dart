@@ -8,6 +8,7 @@ import 'quad_channel_view.dart';
 import 'wifi_config_navigator.dart';
 import 'wifi_list_navigator.dart';
 import 'device_search_view.dart';
+import 'soft_ap_config_view.dart';
 
 class HomeView extends StatefulWidget {
   final CameraViewModel viewModel;
@@ -161,6 +162,39 @@ class _HomeViewState extends State<HomeView> {
     final canConnect = widget.viewModel.canConnect;
     return Column(
       children: [
+        // Soft AP setup first - для первичной настройки
+        _buildButton(
+          label: 'Soft AP Setup (Первичная настройка камеры)',
+          icon: Icons.router,
+          color: Colors.deepOrange,
+          enabled: true, // Always enabled, doesn't require connection
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SoftApConfigView()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildButton(
+          label: 'Device Search (Поиск устройств в сети)',
+          icon: Icons.search,
+          color: Colors.indigo,
+          enabled: true, // Device search doesn't require connection
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DeviceSearchView()),
+            );
+          },
+        ),
+        const Divider(height: 32),
+        const Text(
+          'Для работы следующих функций камера должна быть в домашней WiFi сети',
+          style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
         _buildButton(
           label: 'Single Channel View',
           icon: Icons.videocam,
@@ -202,19 +236,6 @@ class _HomeViewState extends State<HomeView> {
                 builder: (_) =>
                     WifiListNavigator(config: widget.viewModel.config),
               ),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        _buildButton(
-          label: 'Device Search (Network Discovery)',
-          icon: Icons.search,
-          color: Colors.indigo,
-          enabled: true, // Device search doesn't require connection
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const DeviceSearchView()),
             );
           },
         ),

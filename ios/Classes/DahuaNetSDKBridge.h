@@ -54,6 +54,10 @@ typedef struct {
 // Returns number of devices found, fills devices array (max 128 devices)
 int      dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices);
 
+// Get WiFi list from device without login (by IP and port only)
+// Returns number of networks found, fills devices array (max 128 devices)
+int      dh_get_dev_wifi_list(const char* deviceIp, int devicePort, DHWlanDevice* devices, int maxDevices);
+
 /// Device Search by Serial Number
 // Structure for device network info
 typedef struct {
@@ -75,6 +79,19 @@ DHHandle dh_start_search_devices(DHDeviceSearchCallback callback, void* userData
 
 // Stop device search
 void     dh_stop_search_devices(DHHandle searchHandle);
+
+/// WiFi Smart Configuration (Soft AP mode)
+// Start sending WiFi credentials to device in Soft AP mode
+// Returns 0 on success, non-zero on failure
+int      dh_start_smart_config(const char* serialNumber, const char* ssid, const char* password);
+
+// Stop sending WiFi credentials
+// Returns 0 on success, non-zero on failure
+int      dh_stop_smart_config(void);
+
+// Configure device WiFi with timeout (synchronous)
+// Returns 0 on success, non-zero on failure
+int      dh_config_device_wifi(const char* serialNumber, const char* ssid, const char* password, int timeoutSeconds);
 
 #ifdef __cplusplus
 }

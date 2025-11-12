@@ -120,6 +120,42 @@ static DHHandle s_currentSearchHandle = 0;
                                  message:@"Failed to scan WiFi devices"
                                  details:nil]);
     }
+  } else if ([@"getDevWifiList" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSString* deviceIp = args[@"deviceIp"];
+    NSNumber* devicePort = args[@"devicePort"];
+    
+    if (!deviceIp || deviceIp.length == 0) {
+      result([FlutterError errorWithCode:@"INVALID_ARGUMENT"
+                                 message:@"Device IP is required"
+                                 details:nil]);
+      return;
+    }
+    
+    int port = devicePort ? [devicePort intValue] : 37777;
+    
+    // Allocate array for up to 128 devices (max supported by SDK)
+    DHWlanDevice* devices = (DHWlanDevice*)malloc(sizeof(DHWlanDevice) * 128);
+    memset(devices, 0, sizeof(DHWlanDevice) * 128);
+    
+    int count = dh_get_dev_wifi_list([deviceIp UTF8String], port, devices, 128);
+    
+    if (count > 0) {
+      NSMutableArray* deviceList = [NSMutableArray arrayWithCapacity:count];
+      for (int i = 0; i < count; i++) {
+        [deviceList addObject:@{
+          @"ssid": [NSString stringWithUTF8String:devices[i].ssid],
+          @"authMode": @(devices[i].authMode),
+          @"encryptionAlg": @(devices[i].encryptionAlg),
+          @"signalLevel": @(devices[i].signalLevel),
+        }];
+      }
+      free(devices);
+      result(deviceList);
+    } else {
+      free(devices);
+      result(@[]); // Return empty array instead of error
+    }
   } else if ([@"searchDeviceBySerial" isEqualToString:call.method]) {
     NSDictionary* args = call.arguments;
     NSString* serialNo = args[@"serialNo"];
@@ -138,6 +174,41 @@ static DHHandle s_currentSearchHandle = 0;
       s_currentSearchHandle = 0;
     }
     result(nil);
+  } else if ([@"startSmartConfig" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSString* serialNumber = args[@"serialNumber"];
+    NSString* ssid = args[@"ssid"];
+    NSString* password = args[@"password"];
+    
+    if (!serialNumber || !ssid) {
+      result([FlutterError errorWithCode:@"INVALID_ARGUMENT"
+                                 message:@"Serial number and SSID are required"
+                                 details:nil]);
+      return;
+    }
+    
+    int ret = dh_start_smart_config([serialNumber UTF8String], [ssid UTF8String], password ? [password UTF8String] : "");
+    result(@(ret == 0));
+  } else if ([@"stopSmartConfig" isEqualToString:call.method]) {
+    int ret = dh_stop_smart_config();
+    result(@(ret == 0));
+  } else if ([@"configDeviceWifi" isEqualToString:call.method]) {
+    NSDictionary* args = call.arguments;
+    NSString* serialNumber = args[@"serialNumber"];
+    NSString* ssid = args[@"ssid"];
+    NSString* password = args[@"password"];
+    NSNumber* timeout = args[@"timeout"];
+    
+    if (!serialNumber || !ssid) {
+      result([FlutterError errorWithCode:@"INVALID_ARGUMENT"
+                                 message:@"Serial number and SSID are required"
+                                 details:nil]);
+      return;
+    }
+    
+    int timeoutSeconds = timeout ? [timeout intValue] : 60;
+    int ret = dh_config_device_wifi([serialNumber UTF8String], [ssid UTF8String], password ? [password UTF8String] : "", timeoutSeconds);
+    result(@(ret == 0));
   } else if ([@"getPlatformVersion" isEqualToString:call.method]) {
     result([@"iOS " stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else {

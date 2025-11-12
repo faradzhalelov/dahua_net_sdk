@@ -531,6 +531,54 @@ int dh_scan_wlan_devices(DHHandle login, DHWlanDevice* devices, int maxDevices) 
     }
 }
 
+int dh_get_dev_wifi_list(const char* deviceIp, int devicePort, DHWlanDevice* devices, int maxDevices) {
+    if (!deviceIp || !devices || maxDevices <= 0) {
+        NSLog(@"[DahuaBridge] Invalid parameters for dh_get_dev_wifi_list");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Invalid parameters for dh_get_dev_wifi_list"];
+        return 0;
+    }
+    
+    NET_IN_GET_DEV_WIFI_LIST stIn;
+    memset(&stIn, 0, sizeof(stIn));
+    stIn.dwSize = sizeof(stIn);
+    stIn.nPort = devicePort;
+    strncpy(stIn.szDevIP, deviceIp, sizeof(stIn.szDevIP) - 1);
+    
+    NET_OUT_GET_DEV_WIFI_LIST stOut;
+    memset(&stOut, 0, sizeof(stOut));
+    stOut.dwSize = sizeof(stOut);
+    
+    NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] GetDevWifiList: requesting from %s:%d", deviceIp, devicePort];
+    NSLog(@"%@", msg);
+    [DahuaSdkPlugin emitLog:msg];
+    
+    BOOL bRet = CLIENT_GetDevWifiListInfo(&stIn, &stOut, 10000);
+    
+    if (bRet) {
+        int count = stOut.nWlanDevCount;
+        if (count > maxDevices) count = maxDevices;
+        
+        for (int i = 0; i < count; i++) {
+            strncpy(devices[i].ssid, stOut.stuWlanDev[i].szSSID, sizeof(devices[i].ssid) - 1);
+            devices[i].authMode = stOut.stuWlanDev[i].byAuthMode;
+            devices[i].encryptionAlg = stOut.stuWlanDev[i].byEncrAlgr;
+            devices[i].signalLevel = stOut.stuWlanDev[i].byLinkQuality; // 0-100%
+        }
+        
+        msg = [NSString stringWithFormat:@"[DahuaBridge] GetDevWifiList success, found %d networks", count];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        
+        return count;
+    } else {
+        int errCode = CLIENT_GetLastError() & 0x7fffffff;
+        msg = [NSString stringWithFormat:@"[DahuaBridge] GetDevWifiList failed: error=%d", errCode];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+        return 0;
+    }
+}
+
 // Structure to hold search context
 typedef struct {
     DHDeviceSearchCallback callback;
@@ -606,6 +654,64 @@ void dh_stop_search_devices(DHHandle searchHandle) {
         // Note: We're not freeing the SearchContext here as it may still be in use by callbacks
         // In production code, you'd want better memory management
     }
+}
+
+int dh_start_smart_config(const char* serialNumber, const char* ssid, const char* password) {
+    if (!serialNumber || !ssid) {
+        NSLog(@"[DahuaBridge] Invalid parameters for dh_start_smart_config");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Invalid parameters for dh_start_smart_config"];
+        return -1;
+    }
+    
+    int result = CLIENT_StartSearchIPCWifi(serialNumber, ssid, password ? password : "");
+    
+    if (result == 0) {
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Started smart config for device: %s", serialNumber];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    } else {
+        NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Failed to start smart config: %d", result];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    }
+    
+    return result;
+}
+
+int dh_stop_smart_config(void) {
+    int result = CLIENT_StopSearchIPCWifi();
+    
+    NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Stopped smart config: %d", result];
+    NSLog(@"%@", msg);
+    [DahuaSdkPlugin emitLog:msg];
+    
+    return result;
+}
+
+int dh_config_device_wifi(const char* serialNumber, const char* ssid, const char* password, int timeoutSeconds) {
+    if (!serialNumber || !ssid || timeoutSeconds <= 0) {
+        NSLog(@"[DahuaBridge] Invalid parameters for dh_config_device_wifi");
+        [DahuaSdkPlugin emitLog:@"[DahuaBridge] Invalid parameters for dh_config_device_wifi"];
+        return -1;
+    }
+    
+    NSString* msg = [NSString stringWithFormat:@"[DahuaBridge] Configuring device WiFi: %s, timeout=%d", serialNumber, timeoutSeconds];
+    NSLog(@"%@", msg);
+    [DahuaSdkPlugin emitLog:msg];
+    
+    int result = CLIENT_ConfigIPCWifi(serialNumber, ssid, password ? password : "", timeoutSeconds);
+    
+    if (result == 0) {
+        msg = [NSString stringWithFormat:@"[DahuaBridge] Device WiFi configured successfully"];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    } else {
+        msg = [NSString stringWithFormat:@"[DahuaBridge] Failed to configure device WiFi: %d", result];
+        NSLog(@"%@", msg);
+        [DahuaSdkPlugin emitLog:msg];
+    }
+    
+    return result;
 }
 
 #endif
