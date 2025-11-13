@@ -49,11 +49,17 @@ android {
         }
     }
 
+    buildTypes {
+        release {
+            minifyEnabled false
+            // ProGuard rules can be added here if needed
+            // proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
     packagingOptions {
         pickFirst 'lib/armeabi-v7a/libgnustl_shared.so'
         pickFirst 'lib/arm64-v8a/libgnustl_shared.so'
-        // If multiple copies of the Dahua native libs for different ABIs exist, prefer the first found
-        // to avoid merge errors when the same filenames exist across ABI folders.
         pickFirst 'lib/*/libavnetsdk.so'
         pickFirst 'lib/*/libconfigsdk.so'
         pickFirst 'lib/*/libhwdec.so'
@@ -74,8 +80,5 @@ dependencies {
     implementation files('libs/INetSDK.jar')
     implementation files('libs/IPlaySDK.jar')
     implementation files('libs/SmartConfig.jar')
-    implementation files('libs/audiopairsdk.jar')
     implementation files('libs/libToUProxy.jar')
-    implementation files('libs/zxing.jar')
-    // Note: Android_DataGridView-1.01.aar removed - not used in our implementation
 }

@@ -23,7 +23,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // Support both 64-bit and 32-bit ARM for testing devices. Keep only common ABIs to reduce APK size.
+        // Support both 64-bit and 32-bit ARM. Exclude x86/x86_64 to reduce APK size.
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
