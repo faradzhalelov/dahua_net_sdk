@@ -23,12 +23,23 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Support both 64-bit and 32-bit ARM for testing devices. Keep only common ABIs to reduce APK size.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Enable code shrinking and resource shrinking to reduce APK size.
+            // For release builds you should provide a proper signing config.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            // Keep debug signing for local quick testing; replace for production.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

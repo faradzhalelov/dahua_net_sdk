@@ -33,7 +33,10 @@ android {
     sourceSets {
         main {
             java.srcDirs = ['src/main/java']
-            jniLibs.srcDirs = ['libs']  // Point to parent directory, not individual arch folders
+            // Use the conventional jniLibs location inside the module sources so Gradle treats
+            // native libraries as proper ABI libs: src/main/jniLibs/<abi>/lib*.so
+            // We'll place the Dahua .so files into `src/main/jniLibs/arm64-v8a`.
+            jniLibs.srcDirs = ['src/main/jniLibs']
         }
     }
 
@@ -49,6 +52,20 @@ android {
     packagingOptions {
         pickFirst 'lib/armeabi-v7a/libgnustl_shared.so'
         pickFirst 'lib/arm64-v8a/libgnustl_shared.so'
+        // If multiple copies of the Dahua native libs for different ABIs exist, prefer the first found
+        // to avoid merge errors when the same filenames exist across ABI folders.
+        pickFirst 'lib/*/libavnetsdk.so'
+        pickFirst 'lib/*/libconfigsdk.so'
+        pickFirst 'lib/*/libhwdec.so'
+        pickFirst 'lib/*/libjninetsdk.so'
+        pickFirst 'lib/*/libjniplay.so'
+        pickFirst 'lib/*/libjnismartconfig.so'
+        pickFirst 'lib/*/libnetsdk.so'
+        pickFirst 'lib/*/libplay.so'
+        pickFirst 'lib/*/libStreamConvertor.so'
+        pickFirst 'lib/*/libToUProxy.so'
+        pickFirst 'lib/*/libcrypto.so'
+        pickFirst 'lib/*/libssl.so'
     }
 }
 
