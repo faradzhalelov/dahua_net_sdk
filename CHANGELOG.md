@@ -5,6 +5,44 @@ All notable changes to the Dahua SDK Flutter Plugin will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2025-12-01
+
+### Added
+
+#### WiFi Camera Configuration (AP Mode)
+- ✨ `startSmartConfig()` - Start WiFi Smart Configuration for cameras in AP mode
+- ✨ `stopSmartConfig()` - Stop WiFi Smart Configuration
+- ✨ `configDeviceWifi()` - Configure camera WiFi settings with timeout
+- ✨ `getDevWifiList()` - Get available WiFi networks from camera (without login)
+- ✨ `initDeviceAccount()` - Initialize device admin account (first-time setup)
+- ✨ `modifyDevicePassword()` - Change device password for initialized devices
+- ✨ `searchDeviceBySerial()` - Stream-based device discovery on local network
+- ✨ `stopDeviceSearch()` - Stop device discovery
+- ✨ `getWlanConfig()` - Get current WiFi configuration from device
+- ✨ `setWlanConfig()` - Set WiFi configuration to device
+- ✨ `scanWlanDevices()` - Scan for available WiFi networks via device
+
+#### Models
+- `WlanConfig` - WiFi configuration model with auth mode and encryption
+- `WlanDevice` - WiFi network info (SSID, signal level, security)
+- `DeviceInfo` - Device discovery result (serial, IP, MAC, init status)
+- `WlanAuthMode` - Enum for WiFi authentication modes
+- `WlanEncryptionAlg` - Enum for WiFi encryption algorithms
+
+### Fixed
+- 🐛 iOS build errors with missing `searchIPCWifi.h` include
+- 🐛 Added simulator stubs for all WiFi configuration functions
+- 🐛 Fixed `CLIENT_StartSearchIPCWifi`, `CLIENT_StopSearchIPCWifi`, `CLIENT_ConfigIPCWifi` undefined symbols
+- 🐛 Fixed missing simulator stubs for `dh_init_device_account`, `dh_modify_device_password`
+
+### Documentation
+- 📚 Added iOS Local Network Access setup instructions
+- 📚 Added Multicast Entitlement requirements for device discovery
+- 📚 Added direct IP connection examples as alternative to broadcast discovery
+- 📚 Added WiFi camera configuration (AP mode) usage examples
+
+---
+
 ## [0.0.1] - 2025-10-31
 
 ### Added
@@ -155,10 +193,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video snapshot capture
 - Motion detection callbacks
 - Alarm event listeners
-- Device search and discovery
 - Advanced configuration options
 - Performance metrics and monitoring
 - Enhanced error handling and recovery
+- Video recording to file
+- Playback of recorded footage
 
 ---
 
