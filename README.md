@@ -188,6 +188,45 @@ Clean up resources when done:
 await DahuaSdk.cleanup();
 ```
 
+### Device Search (optional)
+
+If you need to search for Dahua devices on local network, you need to:
+
+1. **Request Multicast Entitlement from Apple:**
+   - Go to https://developer.apple.com/contact/request/networking-multicast
+   - Request `com.apple.developer.networking.multicast` for your App ID
+   - Wait for approval (1-2 weeks)
+
+2. **Add entitlement to your app:**
+   ```xml
+   <!-- ios/Runner/Runner.entitlements -->
+   <key>com.apple.developer.networking.multicast</key>
+   <true/>
+   ```
+
+3. **Add to Info.plist:**
+   ```xml
+   <key>NSLocalNetworkUsageDescription</key>
+   <string>Required to discover Dahua cameras on your network</string>
+   <key>NSBonjourServices</key>
+   <array>
+       <string>_dahua._udp</string>
+       <string>_dahua._tcp</string>
+   </array>
+   ```
+
+### Without Multicast Entitlement
+
+You can still connect to devices directly by IP:
+```dart
+final handle = await DahuaSdk.login(
+  ip: '192.168.1.100',
+  port: 37777,
+  user: 'admin', 
+  pass: 'password',
+);
+```
+
 ## Complete Example
 
 See the [example](example/) directory for a complete application demonstrating:

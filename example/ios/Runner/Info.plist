@@ -46,10 +46,15 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app needs local network access to discover and connect to cameras.</string>
+	<string>This app needs local network access to discover and connect to Dahua cameras on your network.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http._tcp</string>
+		<string>_dahua._udp</string>
+		<string>_dhnetsdk._tcp</string>
+		<string>_dhnetsdk._udp</string>
 	</array>
+	<key>NSMulticastUsageDescription</key>
+	<string>This app uses multicast to discover Dahua devices on your local network.</string>
 </dict>
 </plist>

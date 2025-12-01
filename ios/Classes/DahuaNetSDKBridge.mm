@@ -80,11 +80,50 @@ void dh_stop_search_devices(DHHandle searchHandle) {
     [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_stop_search_devices() stub"];
 }
 
+int dh_start_smart_config(const char* serialNumber, const char* ssid, const char* password) {
+    NSLog(@"[DahuaBridge] Simulator: dh_start_smart_config() stub — returns -1");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_start_smart_config() stub — returns -1"];
+    return -1;
+}
+
+int dh_stop_smart_config(void) {
+    NSLog(@"[DahuaBridge] Simulator: dh_stop_smart_config() stub — returns -1");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_stop_smart_config() stub — returns -1"];
+    return -1;
+}
+
+int dh_config_device_wifi(const char* serialNumber, const char* ssid, const char* password, int timeoutSeconds) {
+    NSLog(@"[DahuaBridge] Simulator: dh_config_device_wifi() stub — returns -1");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_config_device_wifi() stub — returns -1"];
+    return -1;
+}
+
+int dh_get_dev_wifi_list(const char* deviceIp, int devicePort, DHWlanDevice* devices, int maxDevices) {
+    NSLog(@"[DahuaBridge] Simulator: dh_get_dev_wifi_list() stub — returns 0");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_get_dev_wifi_list() stub — returns 0"];
+    return 0;
+}
+
+bool dh_init_device_account(NSDictionary* deviceInfo, const char* username, const char* password,
+                            const char* phoneOrEmail, bool useIP) {
+    NSLog(@"[DahuaBridge] Simulator: dh_init_device_account() stub — returns false");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_init_device_account() stub — returns false"];
+    return false;
+}
+
+bool dh_modify_device_password(DHHandle loginHandle, const char* username,
+                               const char* oldPassword, const char* newPassword) {
+    NSLog(@"[DahuaBridge] Simulator: dh_modify_device_password() stub — returns false");
+    [DahuaSdkPlugin emitLog:@"[DahuaBridge] Simulator: dh_modify_device_password() stub — returns false"];
+    return false;
+}
+
 #else
 
 #import "3rdparty/include/netsdk.h"
 #import "3rdparty/include/configsdk.h"
 #import "3rdparty/include/play.h"
+#import "3rdparty/include/searchIPCWifi.h"
 
 // Структура для хранения контекста воспроизведения
 typedef struct {

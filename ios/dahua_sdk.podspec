@@ -34,6 +34,9 @@ Pod::Spec.new do |s|
   
   # Библиотеки SDK (статические .a)
   # Bundle all prebuilt static libraries from the Dahua SDK
+  # NOTE: Dahua SDK libraries have complex interdependencies that make
+  # selective inclusion difficult. Including all libraries ensures
+  # proper functionality but results in larger build times (~30s).
   s.vendored_libraries = 'Classes/3rdparty/lib/*.a'
 
   # Build the pod as a static framework to simplify linking in Flutter apps
